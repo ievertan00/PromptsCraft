@@ -9,7 +9,9 @@ import {
     createFolder,
     renameFolder,
     deleteFolder,
-    moveFolder
+    moveFolder,
+    getPrompt,
+    getAllPrompts
 } from './services/api';
 import type { Folder, Prompt } from './types';
 
@@ -17,7 +19,8 @@ const App: React.FC = () => {
     const [folders, setFolders] = useState<Folder[]>([]);
     const [prompts, setPrompts] = useState<Prompt[]>([]);
     const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-    const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
+    const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null);
+    const [isEditorOpen, setIsEditorOpen] = useState(false);
     const [newFolderParentId, setNewFolderParentId] = useState<string | null | undefined>(undefined);
 
     const fetchAndSetFolders = async () => {
@@ -25,57 +28,56 @@ const App: React.FC = () => {
         setFolders(fetchedFolders);
         return fetchedFolders;
     };
+    
+    const fetchAndSetPrompts = async (folderId: string) => {
+        const fetchedPrompts = await getPromptsByFolderId(folderId);
+        setPrompts(fetchedPrompts);
+    };
 
     // Fetch folders once on mount
     useEffect(() => {
-        fetchAndSetFolders().then(fetchedFolders => {
-            if (fetchedFolders.length > 0 && !selectedFolderId) {
-                // Select the first folder by default only on initial load
-                setSelectedFolderId(fetchedFolders[0].id);
-            }
-        });
+        fetchAndSetFolders();
     }, []);
 
     // Fetch prompts whenever the selected folder changes
     useEffect(() => {
-        const fetchAndSetPrompts = async () => {
-            if (selectedFolderId) {
-                const fetchedPrompts = await getPromptsByFolderId(selectedFolderId);
-                setPrompts(fetchedPrompts);
-                setSelectedPrompt(fetchedPrompts[0] || null); // Select the first prompt
-            } else {
-                setPrompts([]);
-                setSelectedPrompt(null);
-            }
-        };
-        fetchAndSetPrompts();
+        if (selectedFolderId) {
+            fetchAndSetPrompts(selectedFolderId);
+        } else {
+            const fetchAll = async () => {
+                const allPrompts = await getAllPrompts();
+                setPrompts(allPrompts);
+            };
+            fetchAll();
+        }
     }, [selectedFolderId]);
 
-    const handleSelectFolder = (folderId: string) => {
+    const handleSelectFolder = (folderId: string | null) => {
         setSelectedFolderId(folderId);
-        setNewFolderParentId(undefined); // Cancel folder creation on selection change
+        setNewFolderParentId(undefined);
     };
 
-    const handleSelectPrompt = (prompt: Prompt) => {
-        setSelectedPrompt(prompt);
+    const handleEditPrompt = (prompt: Prompt) => {
+        setEditingPrompt(prompt);
+        setIsEditorOpen(true);
     };
 
     const handleNewPrompt = () => {
-        if (!selectedFolderId) {
-            alert("Please select a folder first.");
+        const defaultFolderId = selectedFolderId || (folders.length > 0 ? folders[0].id : null);
+        if (!defaultFolderId) {
+            alert("Please create a folder first to create a new prompt in.");
             return;
         }
         const newPrompt: Prompt = {
             id: `new-${Date.now()}`,
-            folderId: selectedFolderId,
-            title: 'New Prompt',
+            folderId: defaultFolderId,
+            title: '',
             content: '',
             tags: [],
             createdAt: new Date().toISOString(),
         };
-        // Add to list and select it
-        setPrompts(prev => [newPrompt, ...prev]);
-        setSelectedPrompt(newPrompt);
+        setEditingPrompt(newPrompt);
+        setIsEditorOpen(true);
     };
 
     const handleSavePrompt = async (promptToSave: Prompt) => {
@@ -85,21 +87,33 @@ const App: React.FC = () => {
             promptWithId.id = `p-${Date.now()}`;
         }
         
-        const savedPrompt = await savePrompt(promptWithId);
+        await savePrompt(promptWithId);
+        setIsEditorOpen(false);
+        setEditingPrompt(null);
+        
+        // Simplified and corrected refresh logic.
+        // After a save, we always need to refresh the data.
+        // Check if the prompt's folder is the one we are currently viewing.
+        const promptIsInCurrentView = selectedFolderId === promptWithId.folderId;
 
-        if (savedPrompt.folderId !== selectedFolderId) {
-            setSelectedFolderId(savedPrompt.folderId);
+        if (promptIsInCurrentView) {
+            // If we are viewing the folder the prompt was saved to, just refresh the prompts for that folder.
+            await fetchAndSetPrompts(selectedFolderId!);
+        } else if (selectedFolderId === null) {
+            // If we are in "All Prompts" view, a save of any prompt requires a refresh of all prompts.
+            const allPrompts = await getAllPrompts();
+            setPrompts(allPrompts);
         } else {
-            const updatedPrompts = await getPromptsByFolderId(selectedFolderId!);
-            setPrompts(updatedPrompts);
-            setSelectedPrompt(updatedPrompts.find(p => p.id === savedPrompt.id) || null);
+            // If the prompt was saved to a different folder, navigate to that folder.
+            // The useEffect hook for selectedFolderId will then trigger a fetch of the prompts.
+            setSelectedFolderId(promptWithId.folderId);
         }
     };
     
     const handleCreateFolder = async (name: string, parentId: string | null) => {
         await createFolder(name, parentId);
-        setNewFolderParentId(undefined); // Hide input field
-        await fetchAndSetFolders(); // Refresh folder list
+        setNewFolderParentId(undefined);
+        await fetchAndSetFolders();
     };
     
     const handleRenameFolder = async (folderId: string, newName: string) => {
@@ -108,12 +122,10 @@ const App: React.FC = () => {
     };
 
     const handleDeleteFolder = async (folderId: string) => {
+        const folderToDelete = folders.find(f => f.id === folderId);
         await deleteFolder(folderId);
-        // If the deleted folder was selected, select its parent or null
         if (selectedFolderId === folderId) {
-            const flatFolders = await getFolders(); // get the updated raw list
-            const deletedFolder = flatFolders.find(f => f.id === folderId);
-            setSelectedFolderId(deletedFolder?.parentId || null);
+            setSelectedFolderId(folderToDelete?.parentId || null);
         }
         await fetchAndSetFolders();
     };
@@ -128,32 +140,67 @@ const App: React.FC = () => {
         }
     };
 
+    const handleMovePrompt = async (promptId: string, newFolderId: string) => {
+        const promptToMove = await getPrompt(promptId);
+        if (promptToMove && promptToMove.folderId !== newFolderId) {
+            const updatedPrompt = { ...promptToMove, folderId: newFolderId };
+            await savePrompt(updatedPrompt);
+            // Remove from current list visually for immediate feedback
+            setPrompts(prev => prev.filter(p => p.id !== promptId));
+        }
+    };
+
+    const getFolderName = (folderId: string | null): string => {
+        if (!folderId) return 'All Prompts';
+
+        const findFolder = (items: Folder[], id: string): Folder | undefined => {
+            for (const item of items) {
+                if (item.id === id) return item;
+                if (item.children) {
+                    const found = findFolder(item.children, id);
+                    if (found) return found;
+                }
+            }
+            return undefined;
+        };
+        
+        return findFolder(folders, folderId)?.name || 'Prompts';
+    };
 
     return (
         <div className="flex h-screen bg-gray-950 text-white font-sans">
-            <Sidebar
-                folders={folders}
-                selectedFolderId={selectedFolderId}
-                onSelectFolder={handleSelectFolder}
-                onCreateFolder={handleCreateFolder}
-                onRenameFolder={handleRenameFolder}
-                onDeleteFolder={handleDeleteFolder}
-                onMoveFolder={handleMoveFolder}
-                newFolderParentId={newFolderParentId}
-                onNewFolderRequest={(parentId) => setNewFolderParentId(parentId)}
-                onCancelNewFolder={() => setNewFolderParentId(undefined)}
-            />
-            <PromptList
-                prompts={prompts}
-                selectedPrompt={selectedPrompt}
-                onSelectPrompt={handleSelectPrompt}
-                onNewPrompt={handleNewPrompt}
-            />
-            <PromptEditor
-                prompt={selectedPrompt}
-                folders={folders} 
-                onSave={handleSavePrompt}
-            />
+            <div className="w-96 flex-shrink-0">
+                <Sidebar
+                    folders={folders}
+                    selectedFolderId={selectedFolderId}
+                    onSelectFolder={handleSelectFolder}
+                    onCreateFolder={handleCreateFolder}
+                    onRenameFolder={handleRenameFolder}
+                    onDeleteFolder={handleDeleteFolder}
+                    onMoveFolder={handleMoveFolder}
+                    onMovePrompt={handleMovePrompt}
+                    newFolderParentId={newFolderParentId}
+                    onNewFolderRequest={(parentId) => setNewFolderParentId(parentId)}
+                    onCancelNewFolder={() => setNewFolderParentId(undefined)}
+                    onNewPrompt={handleNewPrompt}
+                />
+            </div>
+            <main className="flex-1 overflow-y-auto">
+                 <PromptList
+                    prompts={prompts}
+                    onEditPrompt={handleEditPrompt}
+                    selectedFolderName={getFolderName(selectedFolderId)}
+                />
+            </main>
+            
+            {isEditorOpen && editingPrompt && (
+                <PromptEditor
+                    prompt={editingPrompt}
+                    folders={folders} 
+                    onSave={handleSavePrompt}
+                    onClose={() => setIsEditorOpen(false)}
+                />
+            )}
         </div>
     );
 };

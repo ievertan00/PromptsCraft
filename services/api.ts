@@ -53,15 +53,22 @@ export const getPromptsByFolderId = async (folderId: string): Promise<Prompt[]> 
     );
 };
 
+export const getAllPrompts = async (): Promise<Prompt[]> => {
+    // Simulate async call
+    await new Promise(resolve => setTimeout(resolve, 50));
+    return Promise.resolve(
+        [...prompts]
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    );
+};
+
 export const savePrompt = async (promptToSave: Prompt): Promise<Prompt> => {
     const index = prompts.findIndex(p => p.id === promptToSave.id);
     if (index > -1) {
+        // Update existing prompt
         prompts[index] = promptToSave;
     } else {
-        prompts.push(promptToSave);
-    }
-    // a new prompt might not be in our in-memory `prompts` array yet
-    if (prompts.findIndex(p => p.id === promptToSave.id) === -1) {
+        // Add new prompt
         prompts.push(promptToSave);
     }
     

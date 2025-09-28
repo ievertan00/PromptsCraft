@@ -82,32 +82,19 @@ const App: React.FC = () => {
 
     const handleSavePrompt = async (promptToSave: Prompt) => {
         try {
-            let promptWithId = { ...promptToSave };
-            const isNew = promptWithId.id.startsWith('new-');
-            if (isNew) {
-                promptWithId.id = `p-${Date.now()}`;
-            }
-            
-            await savePrompt(promptWithId);
+            const savedPrompt = await savePrompt(promptToSave);
             setIsEditorOpen(false);
             setEditingPrompt(null);
             
-            // Simplified and corrected refresh logic.
-            // After a save, we always need to refresh the data.
-            // Check if the prompt's folder is the one we are currently viewing.
-            const promptIsInCurrentView = selectedFolderId === promptWithId.folder_id;
+            const promptIsInCurrentView = selectedFolderId === savedPrompt.folder_id;
 
             if (promptIsInCurrentView) {
-                // If we are viewing the folder the prompt was saved to, just refresh the prompts for that folder.
                 await fetchAndSetPrompts(selectedFolderId!);
             } else if (selectedFolderId === null) {
-                // If we are in "All Prompts" view, a save of any prompt requires a refresh of all prompts.
                 const allPrompts = await getAllPrompts();
                 setPrompts(allPrompts);
             } else {
-                // If the prompt was saved to a different folder, navigate to that folder.
-                // The useEffect hook for selectedFolderId will then trigger a fetch of the prompts.
-                setSelectedFolderId(promptWithId.folder_id);
+                setSelectedFolderId(savedPrompt.folder_id);
             }
         } catch (error) {
             console.error("Failed to save prompt:", error);

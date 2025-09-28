@@ -48,6 +48,10 @@ export const savePrompt = async (promptToSave: Prompt): Promise<Prompt> => {
         },
         body: JSON.stringify(promptToSave),
     });
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to save prompt');
+    }
     return await response.json();
 };
 

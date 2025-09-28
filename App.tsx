@@ -70,7 +70,7 @@ const App: React.FC = () => {
         }
         const newPrompt: Prompt = {
             id: `new-${Date.now()}`,
-            folderId: defaultFolderId,
+            folder_id: defaultFolderId,
             title: '',
             content: '',
             tags: [],
@@ -81,53 +81,73 @@ const App: React.FC = () => {
     };
 
     const handleSavePrompt = async (promptToSave: Prompt) => {
-        let promptWithId = { ...promptToSave };
-        const isNew = promptWithId.id.startsWith('new-');
-        if (isNew) {
-            promptWithId.id = `p-${Date.now()}`;
-        }
-        
-        await savePrompt(promptWithId);
-        setIsEditorOpen(false);
-        setEditingPrompt(null);
-        
-        // Simplified and corrected refresh logic.
-        // After a save, we always need to refresh the data.
-        // Check if the prompt's folder is the one we are currently viewing.
-        const promptIsInCurrentView = selectedFolderId === promptWithId.folderId;
+        try {
+            let promptWithId = { ...promptToSave };
+            const isNew = promptWithId.id.startsWith('new-');
+            if (isNew) {
+                promptWithId.id = `p-${Date.now()}`;
+            }
+            
+            await savePrompt(promptWithId);
+            setIsEditorOpen(false);
+            setEditingPrompt(null);
+            
+            // Simplified and corrected refresh logic.
+            // After a save, we always need to refresh the data.
+            // Check if the prompt's folder is the one we are currently viewing.
+            const promptIsInCurrentView = selectedFolderId === promptWithId.folder_id;
 
-        if (promptIsInCurrentView) {
-            // If we are viewing the folder the prompt was saved to, just refresh the prompts for that folder.
-            await fetchAndSetPrompts(selectedFolderId!);
-        } else if (selectedFolderId === null) {
-            // If we are in "All Prompts" view, a save of any prompt requires a refresh of all prompts.
-            const allPrompts = await getAllPrompts();
-            setPrompts(allPrompts);
-        } else {
-            // If the prompt was saved to a different folder, navigate to that folder.
-            // The useEffect hook for selectedFolderId will then trigger a fetch of the prompts.
-            setSelectedFolderId(promptWithId.folderId);
+            if (promptIsInCurrentView) {
+                // If we are viewing the folder the prompt was saved to, just refresh the prompts for that folder.
+                await fetchAndSetPrompts(selectedFolderId!);
+            } else if (selectedFolderId === null) {
+                // If we are in "All Prompts" view, a save of any prompt requires a refresh of all prompts.
+                const allPrompts = await getAllPrompts();
+                setPrompts(allPrompts);
+            } else {
+                // If the prompt was saved to a different folder, navigate to that folder.
+                // The useEffect hook for selectedFolderId will then trigger a fetch of the prompts.
+                setSelectedFolderId(promptWithId.folder_id);
+            }
+        } catch (error) {
+            console.error("Failed to save prompt:", error);
+            alert("Failed to save prompt. See console for details.");
         }
     };
     
     const handleCreateFolder = async (name: string, parentId: string | null) => {
-        await createFolder(name, parentId);
-        setNewFolderParentId(undefined);
-        await fetchAndSetFolders();
+        try {
+            await createFolder(name, parentId);
+            setNewFolderParentId(undefined);
+            await fetchAndSetFolders();
+        } catch (error) {
+            console.error("Failed to create folder:", error);
+            alert("Failed to create folder. See console for details.");
+        }
     };
     
     const handleRenameFolder = async (folderId: string, newName: string) => {
-        await renameFolder(folderId, newName);
-        await fetchAndSetFolders();
+        try {
+            await renameFolder(folderId, newName);
+            await fetchAndSetFolders();
+        } catch (error) {
+            console.error("Failed to rename folder:", error);
+            alert("Failed to rename folder. See console for details.");
+        }
     };
 
     const handleDeleteFolder = async (folderId: string) => {
-        const folderToDelete = folders.find(f => f.id === folderId);
-        await deleteFolder(folderId);
-        if (selectedFolderId === folderId) {
-            setSelectedFolderId(folderToDelete?.parentId || null);
+        try {
+            const folderToDelete = folders.find(f => f.id === folderId);
+            await deleteFolder(folderId);
+            if (selectedFolderId === folderId) {
+                setSelectedFolderId(folderToDelete?.parent_id || null);
+            }
+            await fetchAndSetFolders();
+        } catch (error) {
+            console.error("Failed to delete folder:", error);
+            alert("Failed to delete folder. See console for details.");
         }
-        await fetchAndSetFolders();
     };
     
     const handleMoveFolder = async (folderId: string, newParentId: string | null) => {
@@ -141,12 +161,17 @@ const App: React.FC = () => {
     };
 
     const handleMovePrompt = async (promptId: string, newFolderId: string) => {
-        const promptToMove = await getPrompt(promptId);
-        if (promptToMove && promptToMove.folderId !== newFolderId) {
-            const updatedPrompt = { ...promptToMove, folderId: newFolderId };
-            await savePrompt(updatedPrompt);
-            // Remove from current list visually for immediate feedback
-            setPrompts(prev => prev.filter(p => p.id !== promptId));
+        try {
+            const promptToMove = await getPrompt(promptId);
+            if (promptToMove && promptToMove.folder_id !== newFolderId) {
+                const updatedPrompt = { ...promptToMove, folder_id: newFolderId };
+                await savePrompt(updatedPrompt);
+                // Remove from current list visually for immediate feedback
+                setPrompts(prev => prev.filter(p => p.id !== promptId));
+            }
+        } catch (error) {
+            console.error("Failed to move prompt:", error);
+            alert("Failed to move prompt. See console for details.");
         }
     };
 

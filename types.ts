@@ -2,15 +2,16 @@
 export interface Folder {
     id: string;
     name: string;
-    parentId: string | null;
+    parent_id: string | null;
     children?: Folder[];
 }
 
 export interface Prompt {
     id: string;
-    folderId: string;
+    folder_id: string;
     title: string;
     content: string;
-    tags: string[];
+    tags: string[] | string; // Allow string for JSON parsing
     createdAt: string;
 }
+

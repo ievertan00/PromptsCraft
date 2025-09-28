@@ -1,9 +1,39 @@
 import { initialFolders, initialPrompts } from '../constants';
 import type { Folder, Prompt } from '../types';
 
+const FOLDERS_STORAGE_KEY = 'prompts_craft_folders';
+const PROMPTS_STORAGE_KEY = 'prompts_craft_prompts';
+
+// Helper to load data from localStorage or initialize with default data.
+const loadFromStorage = <T>(key: string, initialData: T[]): T[] => {
+    try {
+        const storedData = localStorage.getItem(key);
+        if (storedData) {
+            return JSON.parse(storedData);
+        }
+    } catch (error) {
+        console.error(`Failed to parse ${key} from localStorage`, error);
+        // If parsing fails, remove the corrupted data.
+        localStorage.removeItem(key);
+    }
+    // If nothing in storage or parsing fails, use initial data and save it.
+    const data = JSON.parse(JSON.stringify(initialData));
+    localStorage.setItem(key, JSON.stringify(data));
+    return data;
+};
+
 // Make the data stateful to persist changes during the session.
-let folders: Folder[] = JSON.parse(JSON.stringify(initialFolders));
-let prompts: Prompt[] = JSON.parse(JSON.stringify(initialPrompts));
+let folders: Folder[] = loadFromStorage<Folder>(FOLDERS_STORAGE_KEY, initialFolders);
+let prompts: Prompt[] = loadFromStorage<Prompt>(PROMPTS_STORAGE_KEY, initialPrompts);
+
+const persistFolders = () => {
+    localStorage.setItem(FOLDERS_STORAGE_KEY, JSON.stringify(folders));
+};
+
+const persistPrompts = () => {
+    localStorage.setItem(PROMPTS_STORAGE_KEY, JSON.stringify(prompts));
+};
+
 
 const findDescendantIds = (items: Folder[], parentId: string): string[] => {
     let ids: string[] = [];
@@ -71,6 +101,7 @@ export const savePrompt = async (promptToSave: Prompt): Promise<Prompt> => {
         // Add new prompt
         prompts.push(promptToSave);
     }
+    persistPrompts();
     
     // Simulate async call
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -90,6 +121,7 @@ export const createFolder = async (name: string, parentId: string | null): Promi
         parentId,
     };
     folders.push(newFolder);
+    persistFolders();
     // Simulate async call
     await new Promise(resolve => setTimeout(resolve, 100));
     return Promise.resolve(newFolder);
@@ -101,6 +133,7 @@ export const renameFolder = async (folderId: string, newName: string): Promise<F
         throw new Error("Folder not found");
     }
     folder.name = newName;
+    persistFolders();
     // Simulate async call
     await new Promise(resolve => setTimeout(resolve, 100));
     return Promise.resolve(folder);
@@ -112,6 +145,9 @@ export const deleteFolder = async (folderId: string): Promise<void> => {
     
     folders = folders.filter(f => !allIdsToDelete.includes(f.id));
     prompts = prompts.filter(p => !allIdsToDelete.includes(p.folderId));
+
+    persistFolders();
+    persistPrompts();
 
     // Simulate async call
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -133,6 +169,7 @@ export const moveFolder = async (folderId: string, newParentId: string | null): 
     }
 
     folderToMove.parentId = newParentId;
+    persistFolders();
     // Simulate async call
     await new Promise(resolve => setTimeout(resolve, 100));
     return Promise.resolve(folderToMove);

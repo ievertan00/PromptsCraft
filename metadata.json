@@ -1,0 +1,5 @@
+{
+  "name": "PromptCraft",
+  "description": "A smart prompt engineering and management web application designed for developers, content creators, and AI hobbyists. It features a hierarchical folder system, AI-powered organization, and a prompt refinement tool to enhance productivity.",
+  "requestFramePermissions": []
+}

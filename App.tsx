@@ -9,6 +9,7 @@ import {
     createFolder,
     renameFolder,
     deleteFolder,
+    deletePrompt,
     moveFolder,
     getPrompt,
     getAllPrompts
@@ -103,6 +104,22 @@ const App: React.FC = () => {
         } catch (error) {
             console.error("Failed to save prompt:", error);
             alert("Failed to save prompt. See console for details.");
+        }
+    };
+
+    const handleDeletePrompt = async (promptId: string) => {
+        console.log(`Attempting to delete prompt with ID: ${promptId}`);
+        try {
+            await deletePrompt(promptId);
+            if (selectedFolderId) {
+                fetchAndSetPrompts(selectedFolderId);
+            } else {
+                const allPrompts = await getAllPrompts();
+                setPrompts(allPrompts);
+            }
+        } catch (error) {
+            console.error("Failed to delete prompt:", error);
+            alert("Failed to delete prompt. See console for details.");
         }
     };
     
@@ -207,6 +224,7 @@ const App: React.FC = () => {
                         <PromptList
                             prompts={prompts}
                             onEditPrompt={handleEditPrompt}
+                            onDeletePrompt={handleDeletePrompt}
                             selectedFolderName={getFolderName(selectedFolderId)}
                         />
                     </ErrorBoundary>

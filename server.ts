@@ -149,6 +149,23 @@ app.put('/api/prompts/:id', (req, res) => {
     });
 });
 
+app.delete('/api/prompts/:id', (req, res) => {
+    const db = getDB();
+    const id = parseInt(req.params.id, 10);
+    const sql = `DELETE FROM prompts WHERE id = ?`;
+    db.run(sql, [id], function(err) {
+        if (err) {
+            res.status(400).json({"error":err.message});
+            return;
+        }
+        if (this.changes === 0) {
+            res.status(404).json({ "error": "Prompt not found" });
+            return;
+        }
+        res.json({ message: 'deleted' });
+    });
+});
+
 
 app.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);

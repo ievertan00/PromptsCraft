@@ -95,6 +95,11 @@ export const deleteFolder = async (folderId: string): Promise<void> => {
     });
 };
 
+export const deletePrompt = async (promptId: string): Promise<void> => {
+    await fetch(`${API_URL}/prompts/${promptId}`, {
+        method: 'DELETE',
+    });
+};
 
 export const moveFolder = async (folderId: string, newParentId: string | null): Promise<Folder> => {
     const response = await fetch(`${API_URL}/folders/${folderId}/move`, {

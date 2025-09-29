@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { Prompt, Folder } from '../types';
 import { suggestTags, refinePrompt, suggestTitle } from '../services/geminiService';
 import { SparklesIcon } from './icons/SparklesIcon';
@@ -33,9 +33,15 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
     const [aiSuggestedTags, setAiSuggestedTags] = useState<string[] | null>(null);
     const [suggestedTitle, setSuggestedTitle] = useState<string | null>(null);
     const [refinedPrompt, setRefinedPrompt] = useState<string | null>(null);
+    const initialFetchDone = useRef(false);
 
     useEffect(() => {
         setPrompt(initialPrompt);
+        // Reset states when a new prompt is loaded into the editor
+        setAiSuggestedTags(null);
+        setSuggestedTitle(null);
+        setRefinedPrompt(null);
+        initialFetchDone.current = false;
     }, [initialPrompt]);
 
     // Handle Escape key press to close modal
@@ -91,14 +97,15 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
     }, [prompt.prompt, prompt.title]);
     
     useEffect(() => {
-        if (typeof prompt.id === 'string' && prompt.id.startsWith('new-') && prompt.prompt.length > 50 && !aiSuggestedTags) {
+        if (typeof prompt.id === 'string' && prompt.id.startsWith('new-') && prompt.prompt.length > 50 && !initialFetchDone.current) {
+            initialFetchDone.current = true; // Set flag immediately to prevent re-triggering
             const timer = setTimeout(() => {
                 getAiSuggestions();
                 getAiTitleSuggestion();
             }, 1500);
             return () => clearTimeout(timer);
         }
-    }, [prompt.id, prompt.prompt, getAiSuggestions, getAiTitleSuggestion, aiSuggestedTags]);
+    }, [prompt.id, prompt.prompt, getAiSuggestions, getAiTitleSuggestion]);
 
 
     const getFolderPath = (folderId: string): string => {

@@ -1,21 +1,40 @@
 import React, { useState, useMemo } from 'react';
 import type { Prompt } from '../types';
 import { PlusIcon } from './icons/PlusIcon';
+import { KebabMenuIcon } from './icons/KebabMenuIcon';
 
 interface PromptListProps {
     prompts: Prompt[];
     selectedFolderName: string;
     onEditPrompt: (prompt: Prompt) => void;
+    onDeletePrompt: (promptId: string) => void;
 }
 
-const PromptCard: React.FC<{ prompt: Prompt; onDoubleClick: () => void; onDragStart: (e: React.DragEvent) => void; }> = ({ prompt, onDoubleClick, onDragStart }) => {
+const PromptCard: React.FC<{ 
+    prompt: Prompt; 
+    onDoubleClick: () => void; 
+    onDragStart: (e: React.DragEvent) => void;
+    onDelete: () => void;
+}> = ({ prompt, onDoubleClick, onDragStart, onDelete }) => {
     return (
         <div
             onDoubleClick={onDoubleClick}
             draggable="true"
             onDragStart={onDragStart}
-            className="bg-theme-secondary border border-theme-default rounded-lg p-4 flex flex-col gap-3 cursor-pointer hover:border-theme-primary-light transition-colors h-full"
+            className="group bg-theme-secondary border border-theme-default rounded-lg p-4 flex flex-col gap-3 cursor-pointer hover:border-theme-primary-light transition-colors h-full relative"
         >
+            <button 
+                onClick={(e) => {
+                    e.stopPropagation(); // Prevent triggering onDoubleClick
+                    if (window.confirm('Are you sure you want to delete this prompt?')) {
+                        onDelete();
+                    }
+                }}
+                className="absolute top-2 right-2 p-1 rounded-full bg-theme-secondary opacity-0 group-hover:opacity-100 hover:bg-theme-hover focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-theme-primary-light transition-opacity"
+                aria-label="Delete prompt"
+            >
+                <KebabMenuIcon className="w-5 h-5 text-theme-secondary" />
+            </button>
             <h3 className="font-semibold text-theme-default truncate">{prompt.title}</h3>
             <p className="text-sm text-theme-secondary line-clamp-3 flex-1">{prompt.prompt}</p>
             <div className="flex flex-wrap gap-2">
@@ -27,7 +46,7 @@ const PromptCard: React.FC<{ prompt: Prompt; onDoubleClick: () => void; onDragSt
     );
 };
 
-const PromptList: React.FC<PromptListProps> = ({ prompts, selectedFolderName, onEditPrompt }) => {
+const PromptList: React.FC<PromptListProps> = ({ prompts, selectedFolderName, onEditPrompt, onDeletePrompt }) => {
     const [searchTerm, setSearchTerm] = useState('');
 
     const filteredPrompts = useMemo(() => {
@@ -72,6 +91,7 @@ const PromptList: React.FC<PromptListProps> = ({ prompts, selectedFolderName, on
                                         prompt={prompt} 
                                         onDoubleClick={() => onEditPrompt(prompt)}
                                         onDragStart={(e) => e.dataTransfer.setData('application/prompt-id', prompt.id)}
+                                        onDelete={() => onDeletePrompt(prompt.id)}
                                     />
                                 ))}
                             </div>
@@ -90,6 +110,7 @@ const PromptList: React.FC<PromptListProps> = ({ prompts, selectedFolderName, on
                                 prompt={prompt} 
                                 onDoubleClick={() => onEditPrompt(prompt)}
                                 onDragStart={(e) => e.dataTransfer.setData('application/prompt-id', prompt.id)}
+                                onDelete={() => onDeletePrompt(prompt.id)}
                             />
                         ))}
                     </div>

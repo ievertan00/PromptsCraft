@@ -10,7 +10,8 @@ export interface Prompt {
     id: string;
     folder_id: string;
     title: string;
-    content: string;
+    prompt: string;
+    context?: string;
     tags: string[] | string; // Allow string for JSON parsing
     createdAt: string;
 }

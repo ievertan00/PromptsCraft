@@ -1,17 +1,29 @@
 import sqlite3 from 'sqlite3';
 
+const sqlite3Verbose = sqlite3.verbose();
+
 const DBSOURCE = "prompts.db";
 
 let db: sqlite3.Database;
 
 export const initDB = (callback: (err: Error | null) => void) => {
-    db = new sqlite3.Database(DBSOURCE, (err) => {
+    db = new sqlite3Verbose.Database(DBSOURCE, (err) => {
         if (err) {
             console.error(err.message);
             callback(err);
         } else {
             console.log('Connected to the SQLite database.');
+            db.configure('busyTimeout', 3000); // Wait 3 seconds if database is busy
             db.serialize(() => {
+                db.run(`CREATE TABLE IF NOT EXISTS folders (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    parent_id INTEGER,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (parent_id) REFERENCES folders(id)
+                )`);
+
                 db.run(`CREATE TABLE IF NOT EXISTS prompts (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     title TEXT,
@@ -22,28 +34,47 @@ export const initDB = (callback: (err: Error | null) => void) => {
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (folder_id) REFERENCES folders(id)
-                )`);
-
-                db.run(`CREATE TABLE IF NOT EXISTS folders (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL,
-                    parent_id INTEGER,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (parent_id) REFERENCES folders(id)
-                )`);
-
-                db.run(`CREATE TABLE IF NOT EXISTS settings (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    key TEXT UNIQUE,
-                    value TEXT
                 )`, (err) => {
-                    callback(err);
+                    if (err) {
+                        callback(err);
+                        return;
+                    }
+                    // Add context column to prompts table if it doesn't exist
+                    db.all("PRAGMA table_info(prompts)", (err, columns) => {
+                        if (err) {
+                            console.error("Error checking table info:", err);
+                            callback(err);
+                            return;
+                        }
+                        const hasContextColumn = columns.some((col: any) => col.name === 'context');
+                        if (!hasContextColumn) {
+                            db.run("ALTER TABLE prompts ADD COLUMN context TEXT", (err) => {
+                                if (err) {
+                                    console.error("Error adding context column:", err);
+                                    callback(err);
+                                } else {
+                                    createSettingsTable(callback);
+                                }
+                            });
+                        } else {
+                            createSettingsTable(callback);
+                        }
+                    });
                 });
             });
         }
     });
 };
+
+const createSettingsTable = (callback: (err: Error | null) => void) => {
+    getDB().run(`CREATE TABLE IF NOT EXISTS settings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        key TEXT UNIQUE,
+        value TEXT
+    )`, (err) => {
+        callback(err);
+    });
+}
 
 export const getDB = () => {
     if (!db) {

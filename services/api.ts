@@ -37,7 +37,7 @@ export const getAllPrompts = async (): Promise<Prompt[]> => {
 };
 
 export const savePrompt = async (promptToSave: Prompt): Promise<Prompt> => {
-    const isNew = promptToSave.id.startsWith('new-');
+    const isNew = typeof promptToSave.id === 'string' && promptToSave.id.startsWith('new-');
     const method = isNew ? 'POST' : 'PUT';
     const url = isNew ? `${API_URL}/prompts` : `${API_URL}/prompts/${promptToSave.id}`;
 

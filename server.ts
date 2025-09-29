@@ -123,9 +123,9 @@ app.get('/api/prompts/:id', (req, res) => {
 
 app.post('/api/prompts', (req, res) => {
     const db = getDB();
-    const { title, prompt, description, tags, folder_id } = req.body;
-    const sql = `INSERT INTO prompts (title, prompt, description, tags, folder_id) VALUES (?, ?, ?, ?, ?)`;
-    const params = [title, prompt, description, JSON.stringify(tags), folder_id];
+    const { title, prompt, context, description, tags, folder_id } = req.body;
+    const sql = `INSERT INTO prompts (title, prompt, context, description, tags, folder_id) VALUES (?, ?, ?, ?, ?, ?)`;
+    const params = [title, prompt, context, description, JSON.stringify(tags), folder_id];
     db.run(sql, params, function(err) {
         if (err) {
             res.status(400).json({"error":err.message});
@@ -137,9 +137,9 @@ app.post('/api/prompts', (req, res) => {
 
 app.put('/api/prompts/:id', (req, res) => {
     const db = getDB();
-    const { title, prompt, description, tags, folder_id } = req.body;
-    const sql = `UPDATE prompts SET title = ?, prompt = ?, description = ?, tags = ?, folder_id = ? WHERE id = ?`;
-    const params = [title, prompt, description, JSON.stringify(tags), folder_id, req.params.id];
+    const { title, prompt, context, description, tags, folder_id } = req.body;
+    const sql = `UPDATE prompts SET title = ?, prompt = ?, context = ?, description = ?, tags = ?, folder_id = ? WHERE id = ?`;
+    const params = [title, prompt, context, description, JSON.stringify(tags), folder_id, req.params.id];
     db.run(sql, params, function(err) {
         if (err) {
             res.status(400).json({"error":err.message});

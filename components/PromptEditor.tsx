@@ -50,8 +50,8 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
         };
     }, [onClose]);
 
-    const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        setPrompt({ ...prompt, content: e.target.value });
+    const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setPrompt({ ...prompt, prompt: e.target.value });
     };
 
     const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -62,34 +62,38 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
         setPrompt({ ...prompt, tags: newTags });
     };
 
+    const handleContextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setPrompt({ ...prompt, context: e.target.value });
+    };
+
     const getAiSuggestions = useCallback(async () => {
-        if (!prompt.content || prompt.content.length < 50) return;
+        if (!prompt.prompt || prompt.prompt.length < 50) return;
         setIsAiLoading(true);
         try {
-            const suggestions = await suggestFolderAndTags(prompt.content, folders);
+            const suggestions = await suggestFolderAndTags(prompt.prompt, folders);
             setAiSuggestions({ folderId: suggestions.suggestedFolderId, tags: suggestions.suggestedTags });
         } catch (error) {
             console.error(error);
         } finally {
             setIsAiLoading(false);
         }
-    }, [prompt.content, folders]);
+    }, [prompt.prompt, folders]);
     
     useEffect(() => {
-        if (prompt.id.startsWith('new-') && prompt.content.length > 50) {
+        if (typeof prompt.id === 'string' && prompt.id.startsWith('new-') && prompt.prompt.length > 50) {
             const timer = setTimeout(() => {
                 getAiSuggestions();
             }, 1500);
             return () => clearTimeout(timer);
         }
-    }, [prompt.id, prompt.content, getAiSuggestions]);
+    }, [prompt.id, prompt.prompt, getAiSuggestions]);
 
 
     const handleRefinePrompt = async () => {
-        if (!prompt.content) return;
+        if (!prompt.prompt) return;
         setIsAiLoading(true);
         try {
-            const result = await refinePrompt(prompt.content);
+            const result = await refinePrompt(prompt.prompt);
             setRefinedPrompt(result);
         } catch (error) {
             console.error(error);
@@ -136,7 +140,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
                         <button 
                             onClick={() => onSave(prompt)}
                             className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md font-semibold transition-colors disabled:bg-indigo-800 disabled:cursor-not-allowed text-sm"
-                            disabled={!prompt.title || !prompt.content}
+                            disabled={!prompt.title || !prompt.prompt}
                         >
                             Save Prompt
                         </button>
@@ -166,10 +170,22 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
                         <TagInput tags={prompt.tags} onTagsChange={handleTagsChange} />
                     </div>
 
+                    <div className="mb-4">
+                        <label htmlFor="prompt-context" className="text-sm font-medium text-gray-400">Context</label>
+                        <textarea
+                            id="prompt-context"
+                            value={prompt.context || ''}
+                            onChange={handleContextChange}
+                            className="w-full p-4 bg-gray-950 rounded-md border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                            placeholder="Optional: Provide context for the prompt..."
+                            rows={3}
+                        />
+                    </div>
+
                     <div className="flex-1 flex flex-col">
                         <div className="flex justify-between items-center mb-2">
-                            <label htmlFor="prompt-content" className="text-sm font-medium text-gray-400">Prompt Content</label>
-                            <button onClick={handleRefinePrompt} disabled={isAiLoading || !prompt.content} className="flex items-center gap-2 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded-md text-sm font-semibold transition-colors disabled:opacity-50">
+                            <label htmlFor="prompt-prompt" className="text-sm font-medium text-gray-400">Prompt Content</label>
+                            <button onClick={handleRefinePrompt} disabled={isAiLoading || !prompt.prompt} className="flex items-center gap-2 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded-md text-sm font-semibold transition-colors disabled:opacity-50">
                                 <SparklesIcon className="w-4 h-4" />
                                 {isAiLoading ? 'Refining...' : 'Refine with AI'}
                             </button>
@@ -180,9 +196,9 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
                                 <div>
                                     <h3 className="text-xs font-semibold uppercase text-gray-400 mb-2">Original</h3>
                                     <textarea
-                                        id="prompt-content"
-                                        value={prompt.content}
-                                        onChange={handleContentChange}
+                                        id="prompt-prompt"
+                                        value={prompt.prompt}
+                                        onChange={handlePromptChange}
                                         className="w-full h-full p-4 bg-gray-950 rounded-md border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
                                         placeholder="Enter your prompt here..."
                                     />
@@ -192,7 +208,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
                                     <div className="w-full h-full p-4 bg-gray-950 rounded-md border border-indigo-500/50 relative overflow-y-auto">
                                         <p className="whitespace-pre-wrap text-sm">{refinedPrompt}</p>
                                         <div className="absolute bottom-4 right-4 flex gap-2">
-                                            <button onClick={() => { setPrompt(p => ({...p, content: refinedPrompt})); setRefinedPrompt(null); }} className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-semibold">Use this version</button>
+                                            <button onClick={() => { setPrompt(p => ({...p, prompt: refinedPrompt})); setRefinedPrompt(null); }} className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-semibold">Use this version</button>
                                             <button onClick={() => setRefinedPrompt(null)} className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs">Dismiss</button>
                                         </div>
                                     </div>
@@ -200,9 +216,9 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
                             </div>
                         ) : (
                             <textarea
-                                id="prompt-content"
-                                value={prompt.content}
-                                onChange={handleContentChange}
+                                id="prompt-prompt"
+                                value={prompt.prompt}
+                                onChange={handlePromptChange}
                                 className="w-full flex-1 p-4 bg-gray-950 rounded-md border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
                                 placeholder="Enter your prompt here..."
                             />

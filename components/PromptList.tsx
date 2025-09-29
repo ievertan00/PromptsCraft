@@ -17,7 +17,7 @@ const PromptCard: React.FC<{ prompt: Prompt; onDoubleClick: () => void; onDragSt
             className="bg-gray-900 border border-gray-800 rounded-lg p-4 flex flex-col gap-3 cursor-pointer hover:border-indigo-500 transition-colors h-full"
         >
             <h3 className="font-semibold text-white truncate">{prompt.title}</h3>
-            <p className="text-sm text-gray-400 line-clamp-3 flex-1">{prompt.content}</p>
+            <p className="text-sm text-gray-400 line-clamp-3 flex-1">{prompt.prompt}</p>
             <div className="flex flex-wrap gap-2">
                 {prompt.tags.slice(0, 3).map(tag => (
                     <span key={tag} className="bg-indigo-500/20 text-indigo-300 text-xs font-medium px-2 py-1 rounded-full">{tag}</span>
@@ -34,7 +34,7 @@ const PromptList: React.FC<PromptListProps> = ({ prompts, selectedFolderName, on
         if (!searchTerm) return prompts;
         return prompts.filter(p => 
             p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            p.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            p.prompt.toLowerCase().includes(searchTerm.toLowerCase()) ||
             p.tags.some(t => t.toLowerCase().includes(searchTerm.toLowerCase()))
         );
     }, [prompts, searchTerm]);

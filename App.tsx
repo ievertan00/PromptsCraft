@@ -15,6 +15,8 @@ import {
 } from './services/api';
 import type { Folder, Prompt } from './types';
 
+import ErrorBoundary from './components/ErrorBoundary';
+
 const App: React.FC = () => {
     const [folders, setFolders] = useState<Folder[]>([]);
     const [prompts, setPrompts] = useState<Prompt[]>([]);
@@ -72,7 +74,8 @@ const App: React.FC = () => {
             id: `new-${Date.now()}`,
             folder_id: defaultFolderId,
             title: '',
-            content: '',
+            prompt: '',
+            context: '',
             tags: [],
             createdAt: new Date().toISOString(),
         };
@@ -198,20 +201,24 @@ const App: React.FC = () => {
                 />
             </div>
             <main className="flex-1 overflow-y-auto">
-                 <PromptList
-                    prompts={prompts}
-                    onEditPrompt={handleEditPrompt}
-                    selectedFolderName={getFolderName(selectedFolderId)}
-                />
+                <ErrorBoundary>
+                    <PromptList
+                        prompts={prompts}
+                        onEditPrompt={handleEditPrompt}
+                        selectedFolderName={getFolderName(selectedFolderId)}
+                    />
+                </ErrorBoundary>
             </main>
             
             {isEditorOpen && editingPrompt && (
-                <PromptEditor
-                    prompt={editingPrompt}
-                    folders={folders} 
-                    onSave={handleSavePrompt}
-                    onClose={() => setIsEditorOpen(false)}
-                />
+                <ErrorBoundary>
+                    <PromptEditor
+                        prompt={editingPrompt}
+                        folders={folders} 
+                        onSave={handleSavePrompt}
+                        onClose={() => setIsEditorOpen(false)}
+                    />
+                </ErrorBoundary>
             )}
         </div>
     );

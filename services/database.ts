@@ -39,24 +39,46 @@ export const initDB = (callback: (err: Error | null) => void) => {
                         callback(err);
                         return;
                     }
-                    // Add context column to prompts table if it doesn't exist
+                    // Migration: Remove context column from prompts table if it exists
                     db.all("PRAGMA table_info(prompts)", (err, columns) => {
                         if (err) {
-                            console.error("Error checking table info:", err);
+                            console.error("Error checking table info for context column removal:", err);
                             callback(err);
                             return;
                         }
                         const hasContextColumn = columns.some((col: any) => col.name === 'context');
-                        if (!hasContextColumn) {
-                            db.run("ALTER TABLE prompts ADD COLUMN context TEXT", (err) => {
-                                if (err) {
-                                    console.error("Error adding context column:", err);
-                                    callback(err);
-                                } else {
-                                    createSettingsTable(callback);
-                                }
+
+                        if (hasContextColumn) {
+                            console.log('Migrating prompts table: removing context column.');
+                            db.serialize(() => {
+                                db.run(`CREATE TABLE prompts_new (
+                                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                    title TEXT,
+                                    prompt TEXT,
+                                    description TEXT,
+                                    tags TEXT,
+                                    folder_id INTEGER,
+                                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                    FOREIGN KEY (folder_id) REFERENCES folders(id)
+                                )`);
+                                
+                                const cols = (columns as any[]).filter(c => c.name !== 'context').map(c => c.name).join(', ');
+                                db.run(`INSERT INTO prompts_new (${cols}) SELECT ${cols} FROM prompts`);
+                                
+                                db.run(`DROP TABLE prompts`);
+                                db.run(`ALTER TABLE prompts_new RENAME TO prompts`, (err) => {
+                                    if (err) {
+                                        console.error("Error finishing prompts table migration:", err);
+                                        callback(err);
+                                    } else {
+                                        console.log('Prompts table migration successful.');
+                                        createSettingsTable(callback);
+                                    }
+                                });
                             });
                         } else {
+                            // If column doesn't exist, just proceed
                             createSettingsTable(callback);
                         }
                     });

@@ -11,7 +11,6 @@ export interface Prompt {
     folder_id: string;
     title: string;
     prompt: string;
-    context?: string;
     tags: string[] | string; // Allow string for JSON parsing
     createdAt: string;
 }

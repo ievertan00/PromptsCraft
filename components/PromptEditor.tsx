@@ -62,9 +62,6 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
         setPrompt({ ...prompt, tags: newTags });
     };
 
-    const handleContextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        setPrompt({ ...prompt, context: e.target.value });
-    };
 
     const getAiSuggestions = useCallback(async () => {
         if (!prompt.prompt || prompt.prompt.length < 50) return;
@@ -170,17 +167,6 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
                         <TagInput tags={prompt.tags} onTagsChange={handleTagsChange} />
                     </div>
 
-                    <div className="mb-4">
-                        <label htmlFor="prompt-context" className="text-sm font-medium text-gray-400">Context</label>
-                        <textarea
-                            id="prompt-context"
-                            value={prompt.context || ''}
-                            onChange={handleContextChange}
-                            className="w-full p-4 bg-gray-950 rounded-md border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                            placeholder="Optional: Provide context for the prompt..."
-                            rows={3}
-                        />
-                    </div>
 
                     <div className="flex-1 flex flex-col">
                         <div className="flex justify-between items-center mb-2">

@@ -73,6 +73,7 @@ export const suggestFolderAndTags = async (
     }
 };
 
+
 export const refinePrompt = async (promptContent: string): Promise<string> => {
     const model = 'gemini-2.5-flash';
 
@@ -98,5 +99,28 @@ export const refinePrompt = async (promptContent: string): Promise<string> => {
     } catch (error) {
         console.error("Error refining prompt with Gemini API:", error);
         throw new Error("Failed to refine prompt.");
+    }
+};
+
+export const suggestTitle = async (promptContent: string): Promise<string> => {
+    const model = 'gemini-2.5-flash';
+
+    const systemInstruction = `You are an expert at summarizing text into concise, descriptive titles. Your task is to generate a short, clear, and relevant title for the given prompt content.
+    - The title should be no more than 10 words.
+    - Respond ONLY with the suggested title text. Do not add any extra commentary or markdown formatting.`;
+
+    try {
+        const response = await ai.models.generateContent({
+            model,
+            contents: promptContent,
+            config: {
+                systemInstruction
+            },
+        });
+
+        return response.text.trim();
+    } catch (error) {
+        console.error("Error suggesting title with Gemini API:", error);
+        throw new Error("Failed to get AI title suggestion.");
     }
 };

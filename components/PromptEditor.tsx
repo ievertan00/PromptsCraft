@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Prompt, Folder } from '../types';
-import { suggestFolderAndTags, refinePrompt } from '../services/geminiService';
+import { suggestFolderAndTags, refinePrompt, suggestTitle } from '../services/geminiService';
 import { SparklesIcon } from './icons/SparklesIcon';
 import TagInput from './TagInput';
 import { XIcon } from './icons/XIcon';
@@ -31,6 +31,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
     const [prompt, setPrompt] = useState<Prompt>(initialPrompt);
     const [isAiLoading, setIsAiLoading] = useState(false);
     const [aiSuggestions, setAiSuggestions] = useState<{ folderId: string; tags: string[] } | null>(null);
+    const [suggestedTitle, setSuggestedTitle] = useState<string | null>(null);
     const [refinedPrompt, setRefinedPrompt] = useState<string | null>(null);
 
     useEffect(() => {
@@ -75,30 +76,31 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
             setIsAiLoading(false);
         }
     }, [prompt.prompt, folders]);
-    
-    useEffect(() => {
-        if (typeof prompt.id === 'string' && prompt.id.startsWith('new-') && prompt.prompt.length > 50) {
-            const timer = setTimeout(() => {
-                getAiSuggestions();
-            }, 1500);
-            return () => clearTimeout(timer);
-        }
-    }, [prompt.id, prompt.prompt, getAiSuggestions]);
 
-
-    const handleRefinePrompt = async () => {
-        if (!prompt.prompt) return;
+    const getAiTitleSuggestion = useCallback(async () => {
+        if (!prompt.prompt || prompt.prompt.length < 50 || prompt.title) return; // Only suggest if title is empty
         setIsAiLoading(true);
         try {
-            const result = await refinePrompt(prompt.prompt);
-            setRefinedPrompt(result);
+            const titleSuggestion = await suggestTitle(prompt.prompt);
+            setSuggestedTitle(titleSuggestion);
         } catch (error) {
             console.error(error);
         } finally {
             setIsAiLoading(false);
         }
-    };
+    }, [prompt.prompt, prompt.title]);
     
+    useEffect(() => {
+        if (typeof prompt.id === 'string' && prompt.id.startsWith('new-') && prompt.prompt.length > 50) {
+            const timer = setTimeout(() => {
+                getAiSuggestions();
+                getAiTitleSuggestion();
+            }, 1500);
+            return () => clearTimeout(timer);
+        }
+    }, [prompt.id, prompt.prompt, getAiSuggestions, getAiTitleSuggestion]);
+
+
     const getFolderPath = (folderId: string): string => {
         const findPath = (items: Folder[], id: string, currentPath: string = ''): string | null => {
             for (const item of items) {
@@ -114,7 +116,18 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
         return findPath(folders, folderId) || "Unknown Folder";
     };
 
-    return (
+    const handleRefinePrompt = async () => {
+        if (!prompt.prompt) return;
+        setIsAiLoading(true);
+        try {
+            const result = await refinePrompt(prompt.prompt);
+            setRefinedPrompt(result);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsAiLoading(false);
+        }
+    };    return (
         <div 
             className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
             onClick={onClose}
@@ -148,16 +161,28 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
                 </div>
 
                 <div className="flex-1 flex flex-col p-6 overflow-y-auto">
-                    {aiSuggestions && (
+                    {suggestedTitle && (
                         <AiSuggestion
-                            title="AI Suggestions"
+                            title="AI Title Suggestion"
                             onAccept={() => {
-                                setPrompt(p => ({ ...p, folderId: aiSuggestions.folderId, tags: [...new Set([...p.tags, ...aiSuggestions.tags])] }));
+                                setPrompt(p => ({ ...p, title: suggestedTitle }));
+                                setSuggestedTitle(null);
+                            }}
+                            onDismiss={() => setSuggestedTitle(null)}
+                        >
+                            <p>Suggested Title: <strong className="font-semibold">{suggestedTitle}</strong></p>
+                        </AiSuggestion>
+                    )}
+
+                    {aiSuggestions && aiSuggestions.tags.length > 0 && (
+                        <AiSuggestion
+                            title="AI Tag Suggestions"
+                            onAccept={() => {
+                                setPrompt(p => ({ ...p, tags: [...new Set([...p.tags, ...aiSuggestions.tags])] }));
                                 setAiSuggestions(null);
                             }}
                             onDismiss={() => setAiSuggestions(null)}
                         >
-                            <p>Move to: <strong className="font-semibold">{getFolderPath(aiSuggestions.folderId)}</strong></p>
                             <p>Add tags: {aiSuggestions.tags.map(t => <span key={t} className="bg-gray-700 text-gray-200 px-2 py-0.5 rounded-full text-xs mr-1">{t}</span>)}</p>
                         </AiSuggestion>
                     )}

@@ -27,11 +27,11 @@ const TagInput: React.FC<TagInputProps> = ({ tags, onTagsChange }) => {
     };
 
     return (
-        <div className="flex flex-wrap items-center gap-2 p-2 bg-gray-950 rounded-md border border-gray-700 focus-within:ring-2 focus-within:ring-indigo-500 mt-1">
+        <div className="flex flex-wrap items-center gap-2 p-2 bg-theme-default rounded-md border border-theme-default focus-within:ring-2 focus-within:ring-theme-primary mt-1">
             {tags.map((tag) => (
-                <div key={tag} className="flex items-center bg-indigo-500/20 text-indigo-300 rounded-full px-3 py-1 text-sm">
+                <div key={tag} className="flex items-center bg-theme-primary/20 text-theme-primary-light rounded-full px-3 py-1 text-sm">
                     <span>{tag}</span>
-                    <button onClick={() => removeTag(tag)} className="ml-2 text-indigo-300 hover:text-white">
+                    <button onClick={() => removeTag(tag)} className="ml-2 text-theme-primary-light hover:text-theme-default">
                         &times;
                     </button>
                 </div>
@@ -41,7 +41,7 @@ const TagInput: React.FC<TagInputProps> = ({ tags, onTagsChange }) => {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="bg-transparent focus:outline-none flex-1 min-w-[120px]"
+                className="bg-transparent focus:outline-none flex-1 min-w-[120px] text-theme-default"
                 placeholder="Add tags..."
             />
         </div>

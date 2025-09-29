@@ -1,41 +1,20 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import type { Folder } from '../types';
+
 
 // Per coding guidelines, API_KEY is assumed to be set in the environment.
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
 
-const generateSimpleIdToPathMap = (folders: Folder[], path = ''): Record<string, string> => {
-    let map: Record<string, string> = {};
-    for (const folder of folders) {
-        const currentPath = path ? `${path}/${folder.name}` : `/${folder.name}`;
-        map[folder.id] = currentPath;
-        if (folder.children && folder.children.length > 0) {
-            map = { ...map, ...generateSimpleIdToPathMap(folder.children, currentPath) };
-        }
-    }
-    return map;
-};
-
-export const suggestFolderAndTags = async (
-    promptContent: string,
-    folders: Folder[]
-): Promise<{ suggestedFolderId: string; suggestedTags: string[] }> => {
-    const folderMap = generateSimpleIdToPathMap(folders);
-
+export const suggestTags = async (promptContent: string): Promise<string[]> => {
     const model = 'gemini-2.5-flash';
-    const systemInstruction = `You are an expert at organizing content. Analyze the user's prompt and suggest the best folder and some relevant tags.
-    - Choose the most relevant folder ID from the provided list.
+    const systemInstruction = `You are an expert at organizing content. Analyze the user's prompt and suggest relevant tags.
     - Generate 3 to 5 descriptive tags.
-    - Respond ONLY with a valid JSON object.`;
+    - Respond ONLY with a valid JSON object with a "suggestedTags" key containing an array of strings.`;
 
     const prompt = `
-    Here is the available folder structure:
-    ${JSON.stringify(folderMap, null, 2)}
-
     Here is the user's prompt content:
     "${promptContent}"
 
-    Suggest the most appropriate folder ID and relevant tags.
+    Suggest relevant tags.
     `;
 
     try {
@@ -48,13 +27,12 @@ export const suggestFolderAndTags = async (
                 responseSchema: {
                     type: Type.OBJECT,
                     properties: {
-                        suggestedFolderId: { type: Type.STRING },
                         suggestedTags: {
                             type: Type.ARRAY,
                             items: { type: Type.STRING },
                         },
                     },
-                    required: ['suggestedFolderId', 'suggestedTags'],
+                    required: ['suggestedTags'],
                 },
             },
         });
@@ -62,14 +40,14 @@ export const suggestFolderAndTags = async (
         const jsonText = response.text.trim();
         const result = JSON.parse(jsonText);
 
-        if (result.suggestedFolderId && Array.isArray(result.suggestedTags)) {
-            return result;
+        if (Array.isArray(result.suggestedTags)) {
+            return result.suggestedTags;
         } else {
             throw new Error("Invalid JSON structure in AI response.");
         }
     } catch (error) {
-        console.error("Error fetching suggestions from Gemini API:", error);
-        throw new Error("Failed to get AI suggestions.");
+        console.error("Error fetching tag suggestions from Gemini API:", error);
+        throw new Error("Failed to get AI tag suggestions.");
     }
 };
 

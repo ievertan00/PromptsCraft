@@ -4,6 +4,7 @@ import { suggestTags, refinePrompt, suggestTitle } from '../services/geminiServi
 import { SparklesIcon } from './icons/SparklesIcon';
 import TagInput from './TagInput';
 import { XIcon } from './icons/XIcon';
+import { ClipboardIcon } from './icons/ClipboardIcon';
 
 interface PromptEditorProps {
     prompt: Prompt;
@@ -34,6 +35,14 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
     const [suggestedTitle, setSuggestedTitle] = useState<string | null>(null);
     const [refinedPrompt, setRefinedPrompt] = useState<string | null>(null);
     const initialFetchDone = useRef(false);
+    const [isCopied, setIsCopied] = useState(false);
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(prompt.prompt).then(() => {
+            setIsCopied(true);
+            setTimeout(() => setIsCopied(false), 2000);
+        });
+    };
 
     useEffect(() => {
         setPrompt(initialPrompt);
@@ -158,7 +167,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
                     <div className="flex items-center gap-4 ml-4">
                         <button 
                             onClick={() => onSave(prompt)}
-                            className="px-4 py-2 bg-theme-primary hover:bg-theme-primary-hover text-white rounded-md font-semibold transition-colors disabled:bg-theme-primary/50 disabled:cursor-not-allowed text-sm"
+                            className="px-4 py-2 bg-transparent border-2 border-theme-primary text-theme-primary rounded-md font-semibold transition-colors hover:bg-theme-primary hover:text-white disabled:border-theme-default disabled:text-theme-secondary disabled:cursor-not-allowed text-sm"
                             disabled={!prompt.title || !prompt.prompt}
                         >
                             Save Prompt
@@ -202,9 +211,19 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
                     </div>
 
 
-                    <div className="flex-1 flex flex-col">
+                    <div className="flex-1 flex flex-col relative">
                         <div className="flex justify-between items-center mb-2">
-                            <label htmlFor="prompt-prompt" className="text-sm font-medium text-theme-secondary">Prompt Content</label>
+                            <div className="flex items-center gap-2">
+                                <label htmlFor="prompt-prompt" className="text-sm font-medium text-theme-secondary">Prompt Content</label>
+                                <button 
+                                    onClick={handleCopy} 
+                                    disabled={!prompt.prompt}
+                                    className="text-theme-secondary hover:text-theme-default disabled:opacity-50"
+                                    title={isCopied ? 'Copied!' : 'Copy to clipboard'}
+                                >
+                                    {isCopied ? <span className="text-xs text-theme-primary">Copied!</span> : <ClipboardIcon className="w-4 h-4" />}
+                                </button>
+                            </div>
                             <button onClick={handleRefinePrompt} disabled={isAiLoading || !prompt.prompt} className="flex items-center gap-2 px-3 py-1.5 bg-theme-tertiary hover:bg-theme-default text-theme-default rounded-md text-sm font-semibold transition-colors disabled:opacity-50">
                                 <SparklesIcon className="w-4 h-4" />
                                 {isAiLoading ? 'Refining...' : 'Refine with AI'}

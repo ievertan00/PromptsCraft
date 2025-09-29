@@ -3,6 +3,7 @@ import type { Folder } from '../types';
 import { LogoIcon } from './icons/LogoIcon';
 import FolderTree from './FolderTree';
 import { PlusIcon } from './icons/PlusIcon';
+import ThemeSelector from './ThemeSelector';
 
 interface SidebarProps {
     folders: Folder[];
@@ -49,20 +50,20 @@ const Sidebar: React.FC<SidebarProps> = ({
 
     return (
         <div 
-            className="w-full h-full bg-gray-900 border-r border-gray-800 flex flex-col"
+            className="w-full h-full bg-theme-secondary border-r border-theme-default flex flex-col"
             onDrop={handleDropOnRoot}
             onDragOver={handleDragOver}
         >
-            <div className="p-4 border-b border-gray-800 flex items-center justify-between">
+            <div className="p-4 border-b border-theme-default flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <LogoIcon className="w-8 h-8 text-indigo-500" />
-                    <h1 className="text-xl font-bold">PromptsCraft</h1>
+                    <LogoIcon className="w-8 h-8 text-theme-primary-light" />
+                    <h1 className="text-xl font-bold text-theme-default">PromptsCraft</h1>
                 </div>
             </div>
-            <div className="p-4 border-b border-gray-800">
+            <div className="p-4 border-b border-theme-default">
                 <button
                     onClick={onNewPrompt}
-                    className="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md font-semibold transition-colors flex items-center justify-center gap-2 text-sm"
+                    className="w-full px-4 py-2 bg-theme-primary hover:bg-theme-primary-hover text-white rounded-md font-semibold transition-colors flex items-center justify-center gap-2 text-sm"
                 >
                     <PlusIcon className="w-5 h-5" />
                     New Prompt
@@ -74,8 +75,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                         onClick={() => onSelectFolder(null)}
                         className={`w-full flex items-center gap-3 p-2 rounded-md text-left text-sm font-medium transition-colors ${
                             selectedFolderId === null 
-                            ? 'bg-indigo-600/30 text-white' 
-                            : 'text-gray-300 hover:bg-gray-800'
+                            ? 'bg-theme-primary/30 text-theme-default' 
+                            : 'text-theme-secondary hover:bg-theme-tertiary'
                         }`}
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -86,10 +87,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                     
                     <div>
                         <div className="pb-2 flex items-center justify-between">
-                            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Folders</h2>
+                            <h2 className="text-xs font-semibold text-theme-secondary uppercase tracking-wider">Folders</h2>
                             <button 
                                 onClick={() => onNewFolderRequest(null)}
-                                className="p-1 rounded-md hover:bg-gray-700 transition-colors"
+                                className="p-1 rounded-md hover:bg-theme-tertiary transition-colors"
                                 title="New Folder"
                             >
                                 <PlusIcon className="w-4 h-4" />
@@ -111,7 +112,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     </div>
                 </div>
             </div>
-            {/* Footer can go here */}
+            <ThemeSelector />
         </div>
     );
 };

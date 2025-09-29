@@ -16,6 +16,7 @@ import {
 import type { Folder, Prompt } from './types';
 
 import ErrorBoundary from './components/ErrorBoundary';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 const App: React.FC = () => {
     const [folders, setFolders] = useState<Folder[]>([]);
@@ -183,44 +184,46 @@ const App: React.FC = () => {
     };
 
     return (
-        <div className="flex h-screen bg-gray-950 text-white font-sans">
-            <div className="w-96 flex-shrink-0">
-                <Sidebar
-                    folders={folders}
-                    selectedFolderId={selectedFolderId}
-                    onSelectFolder={handleSelectFolder}
-                    onCreateFolder={handleCreateFolder}
-                    onRenameFolder={handleRenameFolder}
-                    onDeleteFolder={handleDeleteFolder}
-                    onMoveFolder={handleMoveFolder}
-                    onMovePrompt={handleMovePrompt}
-                    newFolderParentId={newFolderParentId}
-                    onNewFolderRequest={(parentId) => setNewFolderParentId(parentId)}
-                    onCancelNewFolder={() => setNewFolderParentId(undefined)}
-                    onNewPrompt={handleNewPrompt}
-                />
+        <ThemeProvider>
+            <div className="flex h-screen font-sans bg-theme-default text-theme-default">
+                <div className="w-96 flex-shrink-0">
+                    <Sidebar
+                        folders={folders}
+                        selectedFolderId={selectedFolderId}
+                        onSelectFolder={handleSelectFolder}
+                        onCreateFolder={handleCreateFolder}
+                        onRenameFolder={handleRenameFolder}
+                        onDeleteFolder={handleDeleteFolder}
+                        onMoveFolder={handleMoveFolder}
+                        onMovePrompt={handleMovePrompt}
+                        newFolderParentId={newFolderParentId}
+                        onNewFolderRequest={(parentId) => setNewFolderParentId(parentId)}
+                        onCancelNewFolder={() => setNewFolderParentId(undefined)}
+                        onNewPrompt={handleNewPrompt}
+                    />
+                </div>
+                <main className="flex-1 overflow-y-auto">
+                    <ErrorBoundary>
+                        <PromptList
+                            prompts={prompts}
+                            onEditPrompt={handleEditPrompt}
+                            selectedFolderName={getFolderName(selectedFolderId)}
+                        />
+                    </ErrorBoundary>
+                </main>
+                
+                {isEditorOpen && editingPrompt && (
+                    <ErrorBoundary>
+                        <PromptEditor
+                            prompt={editingPrompt}
+                            folders={folders} 
+                            onSave={handleSavePrompt}
+                            onClose={() => setIsEditorOpen(false)}
+                        />
+                    </ErrorBoundary>
+                )}
             </div>
-            <main className="flex-1 overflow-y-auto">
-                <ErrorBoundary>
-                    <PromptList
-                        prompts={prompts}
-                        onEditPrompt={handleEditPrompt}
-                        selectedFolderName={getFolderName(selectedFolderId)}
-                    />
-                </ErrorBoundary>
-            </main>
-            
-            {isEditorOpen && editingPrompt && (
-                <ErrorBoundary>
-                    <PromptEditor
-                        prompt={editingPrompt}
-                        folders={folders} 
-                        onSave={handleSavePrompt}
-                        onClose={() => setIsEditorOpen(false)}
-                    />
-                </ErrorBoundary>
-            )}
-        </div>
+        </ThemeProvider>
     );
 };
 

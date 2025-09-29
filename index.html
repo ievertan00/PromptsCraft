@@ -14,6 +14,107 @@
       body {
         font-family: 'Inter', sans-serif;
       }
+
+      /* Base variables - Dark theme default */
+      :root {
+        --color-bg-default: #0a0a0a;
+        --color-bg-secondary: #171717;
+        --color-bg-tertiary: #262626;
+        --color-text-default: #e5e7eb;
+        --color-text-secondary: #a1a1aa;
+        --color-border-default: #404040;
+        --color-primary: #4f46e5;
+        --color-primary-hover: #4338ca;
+        --color-primary-light: #6366f1;
+        --color-red-bg: #991b1b;
+        --color-red-border: #ef4444;
+        --color-red-text: #fca5a5;
+        --color-tag-bg: rgba(79, 70, 229, 0.2); /* indigo-600 with 20% opacity */
+      }
+
+      /* Light Theme */
+      .theme-light {
+        --color-bg-default: #ffffff;
+        --color-bg-secondary: #f3f4f6;
+        --color-bg-tertiary: #e5e7eb;
+        --color-text-default: #1f2937;
+        --color-text-secondary: #6b7280;
+        --color-border-default: #d1d5db;
+        --color-primary: #4f46e5;
+        --color-primary-hover: #4338ca;
+        --color-primary-light: #6366f1;
+        --color-red-bg: #fef2f2;
+        --color-red-border: #ef4444;
+        --color-red-text: #dc2626;
+        --color-tag-bg: rgba(79, 70, 229, 0.1); /* indigo-600 with 10% opacity */
+      }
+
+      /* Google Code Light Theme */
+      .theme-google-code-light {
+        --color-bg-default: #f8f8f8;
+        --color-bg-secondary: #e8e8e8;
+        --color-bg-tertiary: #d8d8d8;
+        --color-text-default: #333333;
+        --color-text-secondary: #777777;
+        --color-border-default: #cccccc;
+        --color-primary: #1a73e8;
+        --color-primary-hover: #176cdb;
+        --color-primary-light: #4285f4;
+        --color-red-bg: #fce8e6;
+        --color-red-border: #ea4335;
+        --color-red-text: #c5221f;
+        --color-tag-bg: rgba(26, 115, 232, 0.1); /* google blue with 10% opacity */
+      }
+
+      /* GitHub Light Theme */
+      .theme-github-light {
+        --color-bg-default: #ffffff;
+        --color-bg-secondary: #f6f8fa;
+        --color-bg-tertiary: #e1e4e8;
+        --color-text-default: #24292e;
+        --color-text-secondary: #586069;
+        --color-border-default: #d1d5da;
+        --color-primary: #2188ff;
+        --color-primary-hover: #0366d6;
+        --color-primary-light: #66baff;
+        --color-red-bg: #ffeef0;
+        --color-red-border: #cb2431;
+        --color-red-text: #d73a49;
+        --color-tag-bg: rgba(33, 136, 255, 0.1); /* github blue with 10% opacity */
+      }
+
+      /* GitHub Dark Theme */
+      .theme-github-dark {
+        --color-bg-default: #0d1117;
+        --color-bg-secondary: #161b22;
+        --color-bg-tertiary: #21262d;
+        --color-text-default: #c9d1d9;
+        --color-text-secondary: #8b949e;
+        --color-border-default: #30363d;
+        --color-primary: #58a6ff;
+        --color-primary-hover: #307cd6;
+        --color-primary-light: #79c0ff;
+        --color-red-bg: #601010;
+        --color-red-border: #f85149;
+        --color-red-text: #f85149;
+        --color-tag-bg: rgba(88, 166, 255, 0.1); /* github blue with 10% opacity */
+      }
+
+      /* Apply variables using Tailwind's arbitrary values */
+      .bg-theme-default { background-color: var(--color-bg-default); }
+      .bg-theme-secondary { background-color: var(--color-bg-secondary); }
+      .bg-theme-tertiary { background-color: var(--color-bg-tertiary); }
+      .text-theme-default { color: var(--color-text-default); }
+      .text-theme-secondary { color: var(--color-text-secondary); }
+      .border-theme-default { border-color: var(--color-border-default); }
+      .bg-theme-primary { background-color: var(--color-primary); }
+      .hover\:bg-theme-primary-hover:hover { background-color: var(--color-primary-hover); }
+      .text-theme-primary-light { color: var(--color-primary-light); }
+      .bg-theme-red-bg { background-color: var(--color-red-bg); }
+      .border-theme-red-border { border-color: var(--color-red-border); }
+      .text-theme-red-text { color: var(--color-red-text); }
+      .bg-theme-tag-bg { background-color: var(--color-tag-bg); }
+
     </style>
 <script type="importmap">
 {
@@ -26,7 +127,7 @@
 }
 </script>
 </head>
-<body class="bg-gray-900 text-gray-100">
+<body class="font-sans">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
 </body>

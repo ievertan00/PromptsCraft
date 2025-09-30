@@ -187,7 +187,7 @@ const FolderItem: React.FC<{
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 className={`group flex items-center p-2 rounded-md cursor-pointer transition-colors relative ${
-                    isSelected ? 'bg-indigo-600/30 text-white' : 'hover:bg-gray-800 text-gray-300'
+                    isSelected ? 'bg-indigo-600/30 text-white' : 'hover:bg-gray-800 text-theme-secondary'
                 } ${isDragOver ? 'ring-2 ring-indigo-500 ring-inset' : ''}`}
                 style={{ paddingLeft: `${level * 16 + 8}px` }}
             >
@@ -200,7 +200,7 @@ const FolderItem: React.FC<{
                         )}
                     </button>
                 ) : <span className="w-6 mr-2"></span>}
-                {isOpen ? <FolderOpenIcon className="w-5 h-5 mr-2 text-indigo-400 shrink-0" /> : <FolderIcon className="w-5 h-5 mr-2 text-gray-400 shrink-0" />}
+                {isOpen ? <FolderOpenIcon className="w-5 h-5 mr-2 text-theme-primary-light shrink-0" /> : <FolderIcon className="w-5 h-5 mr-2 text-theme-secondary shrink-0" />}
                 
                 {isEditing ? (
                      <input

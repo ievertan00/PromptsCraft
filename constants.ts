@@ -12,6 +12,10 @@ export const TAG_COLORS: string[] = [
     '#EC4899', // Pink
 ];
 
+export const TAILWIND_TAG_COLORS = [
+    'blue', 'green', 'yellow', 'indigo', 'purple', 'pink', 'red', 'orange', 'gray', 'teal', 'cyan', 'lime'
+];
+
 export const initialFolders: Folder[] = [
     { id: '1', name: 'Development', parentId: null },
     { id: '2', name: 'React Tools', parentId: '1' },
@@ -29,6 +33,7 @@ export const initialPrompts: Prompt[] = [
         content: 'Explain the React component lifecycle for a functional component using hooks like useEffect.',
         tags: ['React', 'Hooks', 'Lifecycle', 'useEffect'],
         createdAt: '2023-10-26T10:00:00Z',
+        isFavorite: true,
     },
     {
         id: 'p2',
@@ -37,6 +42,7 @@ export const initialPrompts: Prompt[] = [
         content: 'Write a custom React hook `useFetch` that handles data fetching, loading states, and error handling.',
         tags: ['React', 'Hooks', 'Custom Hook', 'API'],
         createdAt: '2023-10-25T14:30:00Z',
+        isFavorite: true,
     },
     {
         id: 'p3',

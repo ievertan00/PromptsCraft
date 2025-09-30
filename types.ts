@@ -13,5 +13,6 @@ export interface Prompt {
     prompt: string;
     tags: string[] | string; // Allow string for JSON parsing
     createdAt: string;
+    isFavorite?: boolean;
 }
 

@@ -24,6 +24,7 @@ export const getPromptsByFolderId = async (folderId: string): Promise<Prompt[]> 
     return prompts.map((prompt: any) => ({
         ...prompt,
         tags: typeof prompt.tags === 'string' ? JSON.parse(prompt.tags) : prompt.tags,
+        isFavorite: !!prompt.is_favorite,
     }));
 };
 
@@ -33,6 +34,7 @@ export const getAllPrompts = async (): Promise<Prompt[]> => {
     return prompts.map((prompt: any) => ({
         ...prompt,
         tags: typeof prompt.tags === 'string' ? JSON.parse(prompt.tags) : prompt.tags,
+        isFavorite: !!prompt.is_favorite,
     }));
 };
 
@@ -62,6 +64,7 @@ export const getPrompt = async (promptId: string): Promise<Prompt | undefined> =
         return {
             ...prompt,
             tags: typeof prompt.tags === 'string' ? JSON.parse(prompt.tags) : prompt.tags,
+            isFavorite: !!prompt.is_favorite,
         };
     }
     return undefined;
@@ -101,6 +104,16 @@ export const deletePrompt = async (promptId: string): Promise<void> => {
     });
 };
 
+export const updatePromptFavoriteStatus = async (promptId: string, isFavorite: boolean): Promise<void> => {
+    await fetch(`${API_URL}/prompts/${promptId}/favorite`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ isFavorite }),
+    });
+};
+
 export const moveFolder = async (folderId: string, newParentId: string | null): Promise<Folder> => {
     const response = await fetch(`${API_URL}/folders/${folderId}/move`, {
         method: 'PUT',
@@ -110,4 +123,4 @@ export const moveFolder = async (folderId: string, newParentId: string | null): 
         body: JSON.stringify({ parent_id: newParentId }),
     });
     return await response.json();
-}
+};

@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import type { Prompt } from '../types';
 import { PlusIcon } from './icons/PlusIcon';
 import { KebabMenuIcon } from './icons/KebabMenuIcon';
+import { TAG_COLORS } from '../constants';
 
 interface PromptListProps {
     prompts: Prompt[];
@@ -9,6 +10,15 @@ interface PromptListProps {
     onEditPrompt: (prompt: Prompt) => void;
     onDeletePrompt: (promptId: string) => void;
 }
+
+const getTagColor = (tag: string) => {
+    let hash = 0;
+    for (let i = 0; i < tag.length; i++) {
+        hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash) % TAG_COLORS.length;
+    return TAG_COLORS[index];
+};
 
 const PromptCard: React.FC<{ 
     prompt: Prompt; 
@@ -39,7 +49,7 @@ const PromptCard: React.FC<{
             <p className="text-sm text-theme-secondary line-clamp-3 flex-1">{prompt.prompt}</p>
             <div className="flex flex-wrap gap-2">
                 {prompt.tags.slice(0, 3).map(tag => (
-                    <span key={tag} className="bg-theme-tag-bg text-theme-primary-light text-xs font-medium px-2 py-1 rounded-full">{tag}</span>
+                    <span key={tag} className="text-xs font-medium px-2 py-0.5 rounded-md" style={{ backgroundColor: getTagColor(tag), color: '#ffffff' }}>{tag}</span>
                 ))}
             </div>
         </div>

@@ -1,6 +1,17 @@
 
 import type { Folder, Prompt } from './types';
 
+export const TAG_COLORS: string[] = [
+    '#EF4444', // Red
+    '#F97316', // Orange
+    '#EAB308', // Yellow
+    '#22C55E', // Green
+    '#06B6D4', // Cyan
+    '#3B82F6', // Blue
+    '#8B5CF6', // Violet
+    '#EC4899', // Pink
+];
+
 export const initialFolders: Folder[] = [
     { id: '1', name: 'Development', parentId: null },
     { id: '2', name: 'React Tools', parentId: '1' },

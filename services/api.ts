@@ -110,7 +110,7 @@ export const updatePromptFavoriteStatus = async (promptId: string, isFavorite: b
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ isFavorite }),
+        body: JSON.stringify({ is_favorite: isFavorite }),
     });
 };
 

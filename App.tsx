@@ -12,7 +12,8 @@ import {
     deletePrompt,
     moveFolder,
     getPrompt,
-    getAllPrompts
+    getAllPrompts,
+    updatePromptFavoriteStatus
 } from './services/api';
 import type { Folder, Prompt } from './types';
 
@@ -124,16 +125,20 @@ const App: React.FC = () => {
     };
 
     const handleToggleFavorite = async (promptId: string) => {
+        const originalPrompts = [...prompts];
         try {
-            const prompt = await getPrompt(promptId);
+            const prompt = prompts.find(p => p.id === promptId);
             if (prompt) {
-                const updatedPrompt = { ...prompt, isFavorite: !prompt.isFavorite };
-                await savePrompt(updatedPrompt);
-                setPrompts(prompts.map(p => p.id === promptId ? updatedPrompt : p));
+                const updatedPrompts = prompts.map(p => 
+                    p.id === promptId ? { ...p, isFavorite: !p.isFavorite } : p
+                );
+                setPrompts(updatedPrompts);
+                await updatePromptFavoriteStatus(promptId, !prompt.isFavorite);
             }
         } catch (error) {
             console.error("Failed to toggle favorite status:", error);
             alert("Failed to toggle favorite status. See console for details.");
+            setPrompts(originalPrompts);
         }
     };
     

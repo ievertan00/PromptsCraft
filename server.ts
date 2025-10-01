@@ -149,6 +149,19 @@ app.put('/api/prompts/:id', (req, res) => {
     });
 });
 
+app.put('/api/prompts/:id/favorite', (req, res) => {
+    const db = getDB();
+    const { is_favorite } = req.body;
+    const sql = `UPDATE prompts SET is_favorite = ? WHERE id = ?`;
+    db.run(sql, [is_favorite, req.params.id], function(err) {
+        if (err) {
+            res.status(400).json({"error":err.message});
+            return;
+        }
+        res.json({ message: 'updated' });
+    });
+});
+
 app.delete('/api/prompts/:id', (req, res) => {
     const db = getDB();
     const id = parseInt(req.params.id, 10);

@@ -1,5 +1,5 @@
-import { GoogleGenAI, Type } from "@google/genai";
-
+import { GoogleGenAI, Type, ApiError } from "@google/genai";
+import { retryWithBackoff } from "./utils";
 
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
@@ -23,7 +23,7 @@ export const suggestTags = async (promptContent: string): Promise<string[]> => {
     `;
 
     try {
-        const response = await ai.models.generateContent({
+        const response = await retryWithBackoff(() => ai.models.generateContent({
             model,
             contents: prompt,
             config: {
@@ -40,7 +40,7 @@ export const suggestTags = async (promptContent: string): Promise<string[]> => {
                     required: ['suggestedTags'],
                 },
             },
-        });
+        }));
         
         const jsonText = response.text.trim();
         const result = JSON.parse(jsonText);
@@ -70,13 +70,13 @@ export const refinePrompt = async (promptContent: string): Promise<string> => {
     Respond ONLY with the refined prompt text. Do not add any extra commentary or markdown formatting.`;
 
     try {
-        const response = await ai.models.generateContent({
+        const response = await retryWithBackoff(() => ai.models.generateContent({
             model,
             contents: promptContent,
             config: {
                 systemInstruction
             },
-        });
+        }));
 
         return response.text.trim();
     } catch (error) {
@@ -93,13 +93,13 @@ export const suggestTitle = async (promptContent: string): Promise<string> => {
     - Respond ONLY with the suggested title text. Do not add any extra commentary or markdown formatting.`;
 
     try {
-        const response = await ai.models.generateContent({
+        const response = await retryWithBackoff(() => ai.models.generateContent({
             model,
             contents: promptContent,
             config: {
                 systemInstruction
             },
-        });
+        }));
 
         return response.text.trim();
     } catch (error) {

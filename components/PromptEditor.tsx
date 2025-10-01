@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { Prompt, Folder } from '../types';
-import { suggestTags, refinePrompt, suggestTitle } from '../services/geminiService';
+import { suggestTags, refinePrompt, suggestTitle } from '../services/aiService';
 import { SparklesIcon } from './icons/SparklesIcon';
 import TagInput from './TagInput';
 import { XIcon } from './icons/XIcon';

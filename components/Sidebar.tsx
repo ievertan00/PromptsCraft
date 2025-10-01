@@ -3,6 +3,7 @@ import type { Folder } from '../types';
 import { LogoIcon } from './icons/LogoIcon';
 import FolderTree from './FolderTree';
 import { PlusIcon } from './icons/PlusIcon';
+import Settings from './Settings';
 import ThemeSelector from './ThemeSelector';
 
 interface SidebarProps {
@@ -112,6 +113,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     </div>
                 </div>
             </div>
+            <Settings />
             <ThemeSelector />
         </div>
     );

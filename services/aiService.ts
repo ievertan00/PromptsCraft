@@ -1,15 +1,25 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
+const getAiClient = () => {
+    const model = localStorage.getItem('ai_model') || 'Gemini';
+    const apiKeys = JSON.parse(localStorage.getItem('api_keys') || '{}');
+    const apiKey = apiKeys[model];
 
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) {
+        throw new Error(`API key for ${model} is not set.`);
+    }
 
-if (!apiKey) {
-  throw new Error("VITE_GEMINI_API_KEY is not set. Please create a .env file in the root of the project and add VITE_GEMINI_API_KEY=<your-api-key>.");
-}
-
-const ai = new GoogleGenAI({ apiKey });
+    switch (model) {
+        case 'Gemini':
+            return new GoogleGenAI({ apiKey });
+        // Add cases for Qwen and DeepSeek here when their SDKs are available
+        default:
+            throw new Error(`Unsupported AI model: ${model}`);
+    }
+};
 
 export const suggestTags = async (promptContent: string): Promise<string[]> => {
+    const ai = getAiClient();
     const model = 'gemini-2.5-flash';
     const systemInstruction = `You are an expert at organizing content. Analyze the user's prompt and suggest relevant tags.
     - Generate 3 to 5 descriptive tags.
@@ -51,13 +61,13 @@ export const suggestTags = async (promptContent: string): Promise<string[]> => {
             throw new Error("Invalid JSON structure in AI response.");
         }
     } catch (error) {
-        console.error("Error fetching tag suggestions from Gemini API:", error);
+        console.error("Error fetching tag suggestions from AI:", error);
         throw new Error("Failed to get AI tag suggestions.");
     }
 };
 
-
 export const refinePrompt = async (promptContent: string): Promise<string> => {
+    const ai = getAiClient();
     const model = 'gemini-2.5-flash';
 
     const systemInstruction = `You are a world-class prompt engineering expert. Your task is to refine the user-submitted prompt to be more effective for large language models.
@@ -80,12 +90,13 @@ export const refinePrompt = async (promptContent: string): Promise<string> => {
 
         return response.text.trim();
     } catch (error) {
-        console.error("Error refining prompt with Gemini API:", error);
+        console.error("Error refining prompt with AI:", error);
         throw new Error("Failed to refine prompt.");
     }
 };
 
 export const suggestTitle = async (promptContent: string): Promise<string> => {
+    const ai = getAiClient();
     const model = 'gemini-2.5-flash';
 
     const systemInstruction = `You are an expert at summarizing text into concise, descriptive titles. Your task is to generate a short, clear, and relevant title for the given prompt content.
@@ -103,7 +114,7 @@ export const suggestTitle = async (promptContent: string): Promise<string> => {
 
         return response.text.trim();
     } catch (error) {
-        console.error("Error suggesting title with Gemini API:", error);
+        console.error("Error suggesting title with AI:", error);
         throw new Error("Failed to get AI title suggestion.");
     }
 };

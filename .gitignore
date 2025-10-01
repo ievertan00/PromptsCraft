@@ -1,4 +1,22 @@
+# Dependencies
+/node_modules
 
+# Build output
+/dist
 
-# Environment variables
-.env
+# Database
+prompts.db
+
+# IDE files
+.idea
+
+# OS files
+.DS_Store
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Excel temp file
+~$*.xlsx

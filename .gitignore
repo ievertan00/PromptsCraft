@@ -1,4 +1,16 @@
+# Dependency Directories
+/node_modules
 
+# Build/Dist/Artifact Directories
+/dist
+/build
+
+# IDE and OS Files
+.DS_Store
+/.idea/
+
+# Database Files
+prompts.db
 
 # Environment variables
 .env

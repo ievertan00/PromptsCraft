@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { TAG_COLORS } from '../constants';
+import { getTagColorClasses } from '../constants/colors';
 
 interface TagInputProps {
     tags: string[];
@@ -9,15 +9,6 @@ interface TagInputProps {
 
 const TagInput: React.FC<TagInputProps> = ({ tags, onTagsChange }) => {
     const [inputValue, setInputValue] = useState('');
-
-    const getTagColor = (tag: string) => {
-        let hash = 0;
-        for (let i = 0; i < tag.length; i++) {
-            hash = tag.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        const index = Math.abs(hash) % TAG_COLORS.length;
-        return TAG_COLORS[index];
-    };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if ((e.key === 'Enter' || e.key === ',') && inputValue.trim()) {
@@ -39,7 +30,7 @@ const TagInput: React.FC<TagInputProps> = ({ tags, onTagsChange }) => {
     return (
         <div className="flex flex-wrap items-center gap-2 p-2 bg-theme-default rounded-md border border-theme-default focus-within:ring-2 focus-within:ring-theme-primary mt-1">
             {tags.map((tag) => (
-                <div key={tag} className="flex items-center rounded-md px-3 py-0.5 text-sm" style={{ backgroundColor: getTagColor(tag), color: '#ffffff' }}>
+                <div key={tag} className={`flex items-center rounded-md px-3 py-0.5 text-sm ${getTagColorClasses(tag)}`}>
                     <span>{tag}</span>
                     <button onClick={() => removeTag(tag)} className="ml-2 text-white hover:text-gray-200">
                         &times;

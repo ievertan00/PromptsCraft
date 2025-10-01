@@ -2,30 +2,43 @@ import React, { useState, useMemo } from 'react';
 import type { Prompt } from '../types';
 import { PlusIcon } from './icons/PlusIcon';
 import { KebabMenuIcon } from './icons/KebabMenuIcon';
-import { TAG_COLORS } from '../constants';
+import { getTagColorClasses } from '../constants/colors';
+import { SearchIcon } from './icons/SearchIcon';
+import { EditIcon } from './icons/EditIcon';
+import { DeleteIcon } from './icons/DeleteIcon';
+import { StarIcon } from './icons/StarIcon';
+import { StarFilledIcon } from './icons/StarFilledIcon';
 
 interface PromptListProps {
     prompts: Prompt[];
     selectedFolderName: string;
     onEditPrompt: (prompt: Prompt) => void;
     onDeletePrompt: (promptId: string) => void;
+    onToggleFavorite: (promptId: string) => void;
 }
 
-const getTagColor = (tag: string) => {
-    let hash = 0;
-    for (let i = 0; i < tag.length; i++) {
-        hash = tag.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const index = Math.abs(hash) % TAG_COLORS.length;
-    return TAG_COLORS[index];
-};
-
-const PromptCard: React.FC<{ 
-    prompt: Prompt; 
-    onDoubleClick: () => void; 
+const PromptCard: React.FC<{
+    prompt: Prompt;
+    onDoubleClick: () => void;
     onDragStart: (e: React.DragEvent) => void;
     onDelete: () => void;
-}> = ({ prompt, onDoubleClick, onDragStart, onDelete }) => {
+    onToggleFavorite: () => void;
+}> = ({ prompt, onDoubleClick, onDragStart, onDelete, onToggleFavorite }) => {
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const menuRef = React.useRef<HTMLDivElement>(null);
+
+    React.useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setIsMenuOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [menuRef]);
+
     return (
         <div
             onDoubleClick={onDoubleClick}
@@ -33,30 +46,60 @@ const PromptCard: React.FC<{
             onDragStart={onDragStart}
             className="group bg-theme-secondary border border-theme-default rounded-lg p-4 flex flex-col gap-3 cursor-pointer hover:border-theme-primary-light transition-colors h-full relative"
         >
-            <button 
-                onClick={(e) => {
-                    e.stopPropagation(); // Prevent triggering onDoubleClick
-                    if (window.confirm('Are you sure you want to delete this prompt?')) {
-                        onDelete();
-                    }
-                }}
-                className="absolute top-2 right-2 p-1 rounded-full bg-theme-secondary opacity-0 group-hover:opacity-100 hover:bg-theme-hover focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-theme-primary-light transition-opacity"
-                aria-label="Delete prompt"
-            >
-                <KebabMenuIcon className="w-5 h-5 text-theme-secondary" />
-            </button>
+            <div className="absolute top-2 right-2 flex items-center" ref={menuRef}>
+                <button onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }} className="p-1 rounded-full bg-theme-secondary opacity-0 group-hover:opacity-100 hover:bg-theme-hover focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-theme-primary-light transition-opacity">
+                    {prompt.isFavorite ? <StarFilledIcon className="w-5 h-5 text-yellow-400" /> : <StarIcon className="w-5 h-5 text-theme-secondary" />}
+                </button>
+                <button 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setIsMenuOpen(!isMenuOpen);
+                    }}
+                    className="p-1 rounded-full bg-theme-secondary opacity-0 group-hover:opacity-100 hover:bg-theme-hover focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-theme-primary-light transition-opacity"
+                    aria-label="Prompt options"
+                >
+                    <EditIcon className="w-5 h-5 text-theme-secondary" />
+                </button>
+                {isMenuOpen && (
+                    <div className="absolute right-0 mt-8 w-48 bg-theme-secondary rounded-md shadow-lg z-10">
+                        <button 
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onDoubleClick();
+                                setIsMenuOpen(false);
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm text-theme-default hover:bg-theme-hover flex items-center"
+                        >
+                            <EditIcon className="w-4 h-4 mr-2" />
+                            Edit
+                        </button>
+                        <button 
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (window.confirm('Are you sure you want to delete this prompt?')) {
+                                    onDelete();
+                                }
+                                setIsMenuOpen(false);
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-theme-hover flex items-center"
+                        >
+                            <DeleteIcon className="w-4 h-4 mr-2" />
+                            Delete
+                        </button>
+                    </div>
+                )}
+            </div>
             <h3 className="font-semibold text-theme-default truncate">{prompt.title}</h3>
             <p className="text-sm text-theme-secondary line-clamp-3 flex-1">{prompt.prompt}</p>
             <div className="flex flex-wrap gap-2">
                 {prompt.tags.slice(0, 3).map(tag => (
-                    <span key={tag} className="text-xs font-medium px-2 py-0.5 rounded-md" style={{ backgroundColor: getTagColor(tag), color: '#ffffff' }}>{tag}</span>
+                    <span key={tag} className={`text-xs font-medium px-2 py-0.5 rounded-md ${getTagColorClasses(tag)}`}>{tag}</span>
                 ))}
             </div>
         </div>
     );
 };
-
-const PromptList: React.FC<PromptListProps> = ({ prompts, selectedFolderName, onEditPrompt, onDeletePrompt }) => {
+const PromptList: React.FC<PromptListProps> = ({ prompts, selectedFolderName, onEditPrompt, onDeletePrompt, onToggleFavorite }) => {
     const [searchTerm, setSearchTerm] = useState('');
 
     const filteredPrompts = useMemo(() => {
@@ -68,9 +111,7 @@ const PromptList: React.FC<PromptListProps> = ({ prompts, selectedFolderName, on
         );
     }, [prompts, searchTerm]);
 
-    // Mock data for quick access
-    const recentlyUsed = useMemo(() => prompts.slice(0, 3), [prompts]);
-    const mostUsed = useMemo(() => prompts.slice(3, 6), [prompts]);
+    const favoritePrompts = useMemo(() => prompts.filter(p => p.isFavorite), [prompts]);
 
     return (
         <div className="p-8 space-y-8">
@@ -79,29 +120,33 @@ const PromptList: React.FC<PromptListProps> = ({ prompts, selectedFolderName, on
                 <p className="text-theme-secondary">Search, browse, and manage your prompts.</p>
             </header>
             
-            <div>
+            <div className="relative w-full">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <SearchIcon className="w-5 h-5 text-theme-secondary" />
+                </div>
                 <input
                     type="search"
                     placeholder="Search by title, content, or #tag..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full max-w-lg px-4 py-2 bg-theme-secondary border border-theme-default rounded-md focus:outline-none focus:ring-2 focus:ring-theme-primary-light"
+                    className="w-full pl-10 pr-4 py-2 bg-theme-secondary border border-theme-default rounded-md focus:outline-none focus:ring-2 focus:ring-theme-primary-light"
                 />
             </div>
             
             {searchTerm.length === 0 && (
                 <>
-                    {recentlyUsed.length > 0 && (
+                    {favoritePrompts.length > 0 && (
                         <section>
                             <h2 className="text-lg font-semibold mb-4">Quick Access</h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {recentlyUsed.map(prompt => (
+                                {favoritePrompts.map(prompt => (
                                     <PromptCard 
                                         key={prompt.id} 
                                         prompt={prompt} 
                                         onDoubleClick={() => onEditPrompt(prompt)}
                                         onDragStart={(e) => e.dataTransfer.setData('application/prompt-id', prompt.id)}
                                         onDelete={() => onDeletePrompt(prompt.id)}
+                                        onToggleFavorite={() => onToggleFavorite(prompt.id)}
                                     />
                                 ))}
                             </div>
@@ -121,6 +166,7 @@ const PromptList: React.FC<PromptListProps> = ({ prompts, selectedFolderName, on
                                 onDoubleClick={() => onEditPrompt(prompt)}
                                 onDragStart={(e) => e.dataTransfer.setData('application/prompt-id', prompt.id)}
                                 onDelete={() => onDeletePrompt(prompt.id)}
+                                onToggleFavorite={() => onToggleFavorite(prompt.id)}
                             />
                         ))}
                     </div>

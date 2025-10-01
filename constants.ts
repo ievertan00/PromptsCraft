@@ -1,21 +1,6 @@
 
 import type { Folder, Prompt } from './types';
 
-export const TAG_COLORS: string[] = [
-    '#EF4444', // Red
-    '#F97316', // Orange
-    '#EAB308', // Yellow
-    '#22C55E', // Green
-    '#06B6D4', // Cyan
-    '#3B82F6', // Blue
-    '#8B5CF6', // Violet
-    '#EC4899', // Pink
-];
-
-export const TAILWIND_TAG_COLORS = [
-    'blue', 'green', 'yellow', 'indigo', 'purple', 'pink', 'red', 'orange', 'gray', 'teal', 'cyan', 'lime'
-];
-
 export const initialFolders: Folder[] = [
     { id: '1', name: 'Development', parentId: null },
     { id: '2', name: 'React Tools', parentId: '1' },
@@ -51,6 +36,7 @@ export const initialPrompts: Prompt[] = [
         content: 'Create a simple logger middleware for an Express.js application that logs the request method and URL.',
         tags: ['Node.js', 'Express', 'Middleware'],
         createdAt: '2023-10-24T11:00:00Z',
+        isFavorite: false,
     },
     {
         id: 'p4',
@@ -59,6 +45,7 @@ export const initialPrompts: Prompt[] = [
         content: 'Generate 5 blog post ideas for a blog about sustainable living. The ideas should be engaging and SEO-friendly.',
         tags: ['Content', 'Blog', 'SEO'],
         createdAt: '2023-10-23T09:00:00Z',
+        isFavorite: false,
     },
     {
         id: 'p5',
@@ -67,5 +54,6 @@ export const initialPrompts: Prompt[] = [
         content: 'Write a 5-tweet thread about the future of generative AI in content creation. Make it engaging and easy to understand for a non-technical audience.',
         tags: ['Social Media', 'Twitter', 'AI'],
         createdAt: '2023-10-22T16:00:00Z',
+        isFavorite: false,
     },
 ];

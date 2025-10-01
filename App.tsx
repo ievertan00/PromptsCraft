@@ -122,6 +122,20 @@ const App: React.FC = () => {
             alert("Failed to delete prompt. See console for details.");
         }
     };
+
+    const handleToggleFavorite = async (promptId: string) => {
+        try {
+            const prompt = await getPrompt(promptId);
+            if (prompt) {
+                const updatedPrompt = { ...prompt, isFavorite: !prompt.isFavorite };
+                await savePrompt(updatedPrompt);
+                setPrompts(prompts.map(p => p.id === promptId ? updatedPrompt : p));
+            }
+        } catch (error) {
+            console.error("Failed to toggle favorite status:", error);
+            alert("Failed to toggle favorite status. See console for details.");
+        }
+    };
     
     const handleCreateFolder = async (name: string, parentId: string | null) => {
         try {
@@ -225,6 +239,7 @@ const App: React.FC = () => {
                             prompts={prompts}
                             onEditPrompt={handleEditPrompt}
                             onDeletePrompt={handleDeletePrompt}
+                            onToggleFavorite={handleToggleFavorite}
                             selectedFolderName={getFolderName(selectedFolderId)}
                         />
                     </ErrorBoundary>

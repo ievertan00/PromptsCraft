@@ -19,7 +19,7 @@ export const getFolders = async (): Promise<Folder[]> => {
 };
 
 export const getPromptsByFolderId = async (folderId: string): Promise<Prompt[]> => {
-    const response = await fetch(`${API_URL}/prompts?folderId=${folderId}`);
+    const response = await fetch(`${API_URL}/folders/${folderId}/prompts`);
     const prompts = await response.json();
     return prompts.map((prompt: any) => ({
         ...prompt,

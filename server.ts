@@ -89,6 +89,29 @@ app.put('/api/folders/:id/move', (req, res) => {
     });
 });
 
+app.get('/api/folders/:id/prompts', (req, res) => {
+    const db = getDB();
+    const folderId = req.params.id;
+
+    const sql = `
+        WITH RECURSIVE subfolders(id) AS (
+            SELECT ?
+            UNION ALL
+            SELECT f.id FROM folders f JOIN subfolders s ON f.parent_id = s.id
+        )
+        SELECT p.* FROM prompts p JOIN subfolders sf ON p.folder_id = sf.id;
+    `;
+
+    db.all(sql, [folderId], (err, rows) => {
+        if (err) {
+            res.status(400).json({"error": err.message});
+            return;
+        }
+        res.json(rows);
+    });
+});
+
+
 
 // Prompt API endpoints
 app.get('/api/prompts', (req, res) => {

@@ -1,8 +1,13 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
 
-// Per coding guidelines, API_KEY is assumed to be set in the environment.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+
+if (!apiKey) {
+  throw new Error("VITE_GEMINI_API_KEY is not set. Please create a .env file in the root of the project and add VITE_GEMINI_API_KEY=<your-api-key>.");
+}
+
+const ai = new GoogleGenAI({ apiKey });
 
 export const suggestTags = async (promptContent: string): Promise<string[]> => {
     const model = 'gemini-2.5-flash';

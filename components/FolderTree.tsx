@@ -3,6 +3,8 @@ import type { Folder } from '../types';
 import { FolderIcon, FolderOpenIcon } from './icons/FolderIcons';
 import { KebabMenuIcon } from './icons/KebabMenuIcon';
 import { PlusIcon } from './icons/PlusIcon';
+import { EditIcon } from './icons/EditIcon';
+import { DeleteIcon } from './icons/DeleteIcon';
 
 interface FolderTreeProps {
     folders: Folder[];
@@ -226,9 +228,9 @@ const FolderItem: React.FC<{
                     </button>
                     {menuOpen && (
                         <div ref={menuRef} className="absolute z-10 right-0 mt-2 w-40 bg-gray-700 border border-gray-600 rounded-md shadow-lg py-1">
-                           <a onClick={(e) => { e.stopPropagation(); props.onNewFolderRequest(folder.id); setMenuOpen(false); }} className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-600 cursor-pointer"><PlusIcon className="w-4 h-4" /> New Subfolder</a>
-                           <a onClick={(e) => { e.stopPropagation(); setIsEditing(true); setMenuOpen(false); }} className="block px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-600 cursor-pointer">Rename</a>
-                           <a onClick={(e) => { e.stopPropagation(); onDeleteFolder(folder.id); setMenuOpen(false); }} className="block px-3 py-1.5 text-sm text-red-400 hover:bg-gray-600 cursor-pointer">Delete</a>
+                           <a onClick={(e) => { e.stopPropagation(); props.onNewFolderRequest(folder.id); setMenuOpen(false); }} className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-600 cursor-pointer"><PlusIcon className="w-4 h-4 flex-shrink-0" /> New Subfolder</a>
+                           <a onClick={(e) => { e.stopPropagation(); setIsEditing(true); setMenuOpen(false); }} className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-600 cursor-pointer"><EditIcon className="w-4 h-4 flex-shrink-0" /> Rename</a>
+                           <a onClick={(e) => { e.stopPropagation(); if (window.confirm('Are you sure you want to delete this folder and all its contents?')) { onDeleteFolder(folder.id); } setMenuOpen(false); }} className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-400 hover:bg-gray-600 cursor-pointer"><DeleteIcon className="w-4 h-4 flex-shrink-0" /> Delete</a>
                         </div>
                     )}
                 </div>

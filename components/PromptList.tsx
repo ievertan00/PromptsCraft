@@ -8,6 +8,8 @@ import { EditIcon } from './icons/EditIcon';
 import { DeleteIcon } from './icons/DeleteIcon';
 import { StarIcon } from './icons/StarIcon';
 import { StarFilledIcon } from './icons/StarFilledIcon';
+import { BriefcaseIcon } from './icons/BriefcaseIcon';
+import FolderSelectModal from './FolderSelectModal';
 
 interface PromptListProps {
     prompts: Prompt[];
@@ -15,6 +17,8 @@ interface PromptListProps {
     onEditPrompt: (prompt: Prompt) => void;
     onDeletePrompt: (promptId: string) => void;
     onToggleFavorite: (promptId: string) => void;
+    folders: Folder[];
+    onMovePrompt: (promptId: string, newFolderId: string) => void;
 }
 
 const PromptCard: React.FC<{
@@ -23,8 +27,11 @@ const PromptCard: React.FC<{
     onDragStart: (e: React.DragEvent) => void;
     onDelete: () => void;
     onToggleFavorite: () => void;
-}> = ({ prompt, onDoubleClick, onDragStart, onDelete, onToggleFavorite }) => {
+    onMove: (promptId: string, newFolderId: string) => void;
+    folders: Folder[];
+}> = ({ prompt, onDoubleClick, onDragStart, onDelete, onToggleFavorite, onMove, folders }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
     const menuRef = React.useRef<HTMLDivElement>(null);
 
     React.useEffect(() => {
@@ -38,6 +45,17 @@ const PromptCard: React.FC<{
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, [menuRef]);
+
+    const handleMoveClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsMenuOpen(false);
+        setIsMoveModalOpen(true);
+    };
+
+    const handleFolderSelect = (newFolderId: string) => {
+        onMove(prompt.id, newFolderId);
+        setIsMoveModalOpen(false);
+    };
 
     return (
         <div
@@ -74,6 +92,13 @@ const PromptCard: React.FC<{
                             Edit
                         </button>
                         <button 
+                            onClick={handleMoveClick}
+                            className="w-full text-left px-4 py-2 text-sm text-theme-default hover:bg-theme-hover flex items-center"
+                        >
+                            <BriefcaseIcon className="w-4 h-4 mr-2" />
+                            Move
+                        </button>
+                        <button 
                             onClick={(e) => {
                                 e.stopPropagation();
                                 if (window.confirm('Are you sure you want to delete this prompt?')) {
@@ -96,10 +121,18 @@ const PromptCard: React.FC<{
                     <span key={tag} className={`text-xs font-medium px-2 py-0.5 rounded-md ${getTagColorClasses(tag)}`}>{tag}</span>
                 ))}
             </div>
+            {isMoveModalOpen && (
+                <FolderSelectModal
+                    folders={folders}
+                    onSelect={handleFolderSelect}
+                    onClose={() => setIsMoveModalOpen(false)}
+                    currentFolderId={prompt.folder_id}
+                />
+            )}
         </div>
     );
 };
-const PromptList: React.FC<PromptListProps> = ({ prompts, selectedFolderName, onEditPrompt, onDeletePrompt, onToggleFavorite }) => {
+const PromptList: React.FC<PromptListProps> = ({ prompts, selectedFolderName, onEditPrompt, onDeletePrompt, onToggleFavorite, folders, onMovePrompt }) => {
     const [searchTerm, setSearchTerm] = useState('');
 
     const filteredPrompts = useMemo(() => {
@@ -147,6 +180,8 @@ const PromptList: React.FC<PromptListProps> = ({ prompts, selectedFolderName, on
                                         onDragStart={(e) => e.dataTransfer.setData('application/prompt-id', prompt.id)}
                                         onDelete={() => onDeletePrompt(prompt.id)}
                                         onToggleFavorite={() => onToggleFavorite(prompt.id)}
+                                        onMove={onMovePrompt}
+                                        folders={folders}
                                     />
                                 ))}
                             </div>
@@ -167,6 +202,8 @@ const PromptList: React.FC<PromptListProps> = ({ prompts, selectedFolderName, on
                                 onDragStart={(e) => e.dataTransfer.setData('application/prompt-id', prompt.id)}
                                 onDelete={() => onDeletePrompt(prompt.id)}
                                 onToggleFavorite={() => onToggleFavorite(prompt.id)}
+                                onMove={onMovePrompt}
+                                folders={folders}
                             />
                         ))}
                     </div>

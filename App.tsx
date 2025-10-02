@@ -250,6 +250,8 @@ const App: React.FC = () => {
                             onDeletePrompt={handleDeletePrompt}
                             onToggleFavorite={handleToggleFavorite}
                             selectedFolderName={getFolderName(selectedFolderId)}
+                            folders={folders}
+                            onMovePrompt={handleMovePrompt}
                         />
                     </ErrorBoundary>
                 </main>

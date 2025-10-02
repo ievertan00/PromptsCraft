@@ -3,6 +3,7 @@ import type { Folder } from '../types';
 import { LogoIcon } from './icons/LogoIcon';
 import FolderTree from './FolderTree';
 import { PlusIcon } from './icons/PlusIcon';
+import { BrainIcon } from './icons/BrainIcon';
 import ThemeSelector from './ThemeSelector';
 import type { SupportedModel } from '../services/aiService';
 
@@ -118,18 +119,21 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </div>
             </div>
             <div className="p-4 border-t border-theme-default">
-                <div className="flex items-center gap-2 mb-4">
-                    <label htmlFor="ai-model-select" className="text-sm font-medium text-theme-secondary">AI Model:</label>
-                    <select 
-                        id="ai-model-select"
-                        value={selectedModel}
-                        onChange={(e) => onSelectedModelChange(e.target.value as SupportedModel)}
-                        className="bg-theme-tertiary text-theme-default rounded-md px-2 py-1 text-sm w-full"
-                    >
-                        <option value="gemini">Gemini</option>
-                        <option value="deepseek">Deepseek</option>
-                    </select>
+                <div className="flex items-center gap-2 mb-2">
+                    <BrainIcon className="w-5 h-5 text-theme-secondary" />
+                    <h4 className="text-sm font-semibold text-theme-secondary">AI Model Selection</h4>
                 </div>
+                <select
+                    id="ai-model-select"
+                    value={selectedModel}
+                    onChange={(e) => onSelectedModelChange(e.target.value as SupportedModel)}
+                    className="bg-theme-tertiary text-theme-default rounded-md px-2 py-1 text-sm w-full"
+                >
+                    <option value="gemini">Gemini</option>
+                    <option value="deepseek">Deepseek</option>
+                </select>
+            </div>
+            <div className="p-4 border-t border-theme-default mb-4">
                 <ThemeSelector />
             </div>
         </div>

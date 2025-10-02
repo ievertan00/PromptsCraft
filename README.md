@@ -7,6 +7,7 @@
 ## Features
 
 - **📝 Rich Prompt Editor:** Create and edit prompts with a user-friendly editor.
+- **🧠 Multi-AI Model Support:** Seamlessly switch between different AI models like Gemini and Deepseek for prompt suggestions, refinement, and title generation.
 - **🗂️ Folder Organization:** Organize your prompts into a hierarchical folder structure.
 - **🏷️ Tagging System:** Add tags to your prompts for easy categorization and filtering.
 - **🔍 Powerful Search:** Quickly find prompts by title, content, or tags.
@@ -40,11 +41,12 @@
     npm install
     ```
 
-3.  **Set up your Gemini API Key:**
+3.  **Set up your AI API Keys:**
     - Create a `.env` file in the root of the project.
-    - Add your Gemini API key to the `.env` file:
+    - Add your API keys to the `.env` file. You will need keys for both Gemini and Deepseek:
       ```
-      GEMINI_API_KEY=your_api_key_here
+      VITE_GEMINI_API_KEY=your_gemini_api_key_here
+      VITE_DEEPSEEK_API_KEY=your_deepseek_api_key_here
       ```
 
 4.  **Run the development servers:**

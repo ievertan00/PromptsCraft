@@ -1,8 +1,13 @@
 import React from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import { themes } from '../constants/themes';
+import { SparklesIcon } from './icons/SparklesIcon';
 
-const ThemeSelector: React.FC = () => {
+interface ThemeSelectorProps {
+  className?: string;
+}
+
+const ThemeSelector: React.FC<ThemeSelectorProps> = ({ className }) => {
   const { theme, setTheme } = useTheme();
 
   const handleThemeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -14,13 +19,16 @@ const ThemeSelector: React.FC = () => {
   };
 
   return (
-    <div className="p-4 border-t border-theme-default mt-auto">
-      <label htmlFor="theme-select" className="block text-sm font-medium text-theme-secondary mb-2">Select Theme:</label>
+    <div className={className}>
+      <div className="flex items-center gap-2 mb-2">
+        <SparklesIcon className="w-5 h-5 text-theme-secondary" />
+        <h4 className="text-sm font-semibold text-theme-secondary">Select Theme</h4>
+      </div>
       <select
         id="theme-select"
         value={theme.name}
         onChange={handleThemeChange}
-        className="block w-full pl-3 pr-10 py-2 text-base bg-theme-secondary border border-theme-default focus:outline-none focus:ring-theme-primary-light focus:border-theme-primary-light sm:text-sm rounded-md"
+        className="bg-theme-tertiary text-theme-default rounded-md px-2 py-1 text-sm w-full"
       >
         {themes.map((t) => (
           <option key={t.name} value={t.name}>

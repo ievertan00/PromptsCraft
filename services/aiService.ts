@@ -44,6 +44,7 @@ export const suggestTags = async (promptContent: string, selectedModel: Supporte
 
   const systemInstruction = `You are an expert at organizing content. Analyze the user's prompt and suggest relevant tags.
     - Generate 3 to 5 descriptive tags.
+    - Detect the language of the user's prompt and respond ONLY with tags in that same language.
     - Respond ONLY with a valid JSON object with a "suggestedTags" key containing an array of strings.`;
 
   const prompt = `
@@ -143,6 +144,7 @@ export const suggestTitle = async (promptContent: string, selectedModel: Support
 
   const systemInstruction = `You are an expert at summarizing text into concise, descriptive titles. Your task is to generate a short, clear, and relevant title for the given prompt content.
     - The title should be no more than 10 words.
+    - Detect the language of the given prompt content and respond ONLY with the suggested title text in that same language.
     - Respond ONLY with the suggested title text. Do not add any extra commentary or markdown formatting.`;
 
   try {

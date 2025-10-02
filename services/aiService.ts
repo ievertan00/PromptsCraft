@@ -57,7 +57,7 @@ export const suggestTags = async (promptContent: string, selectedModel: Supporte
     let jsonText: string;
 
     if (aiClient instanceof GenerativeModel && selectedModel === 'gemini') {
-      const result = await retryWithBackoff(async () => {
+      const result = await (async () => {
         const streamingResp = await aiClient.generateContentStream({
             contents: [{ role: "user", parts: [{ text: prompt }] }],
             generationConfig: { responseMimeType: 'application/json' },
@@ -69,14 +69,14 @@ export const suggestTags = async (promptContent: string, selectedModel: Supporte
             }
         }
         return aggregatedResponse;
-      });
+      })();
       jsonText = result;
     } else if (aiClient instanceof OpenAI && selectedModel === 'deepseek') {
-      const completion = await retryWithBackoff(() => aiClient.chat.completions.create({
+      const completion = await aiClient.chat.completions.create({
         messages: [{ role: "system", content: systemInstruction }, { role: "user", content: prompt }],
         model: "deepseek-chat",
         response_format: { type: "json_object" }
-      }));
+      });
       jsonText = completion.choices[0].message.content ?? "";
     } else {
       throw new Error("Invalid AI client or model configuration.");
@@ -110,7 +110,7 @@ export const refinePrompt = async (promptContent: string, selectedModel: Support
 
   try {
     if (aiClient instanceof GenerativeModel && selectedModel === 'gemini') {
-        const result = await retryWithBackoff(async () => {
+        const result = await (async () => {
             const streamingResp = await aiClient.generateContentStream({
                 contents: [{ role: "user", parts: [{ text: promptContent }] }],
             });
@@ -121,13 +121,13 @@ export const refinePrompt = async (promptContent: string, selectedModel: Support
                 }
             }
             return aggregatedResponse;
-        });
+        })();
         return result.trim();
     } else if (aiClient instanceof OpenAI && selectedModel === 'deepseek') {
-      const completion = await retryWithBackoff(() => aiClient.chat.completions.create({
+      const completion = await aiClient.chat.completions.create({
         messages: [{ role: "system", content: systemInstruction }, { role: "user", content: promptContent }],
         model: "deepseek-chat",
-      }));
+      });
       return completion.choices[0].message.content?.trim() ?? "";
     } else {
       throw new Error("Invalid AI client or model configuration.");
@@ -147,7 +147,7 @@ export const suggestTitle = async (promptContent: string, selectedModel: Support
 
   try {
     if (aiClient instanceof GenerativeModel && selectedModel === 'gemini') {
-        const result = await retryWithBackoff(async () => {
+        const result = await (async () => {
             const streamingResp = await aiClient.generateContentStream({
                 contents: [{ role: "user", parts: [{ text: promptContent }] }],
             });
@@ -158,13 +158,13 @@ export const suggestTitle = async (promptContent: string, selectedModel: Support
                 }
             }
             return aggregatedResponse;
-        });
+        })();
         return result.trim();
     } else if (aiClient instanceof OpenAI && selectedModel === 'deepseek') {
-      const completion = await retryWithBackoff(() => aiClient.chat.completions.create({
+      const completion = await aiClient.chat.completions.create({
         messages: [{ role: "system", content: systemInstruction }, { role: "user", content: promptContent }],
         model: "deepseek-chat",
-      }));
+      });
       return completion.choices[0].message.content?.trim() ?? "";
     } else {
       throw new Error("Invalid AI client or model configuration.");

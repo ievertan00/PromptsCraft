@@ -62,7 +62,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         >
             <div className="p-4 border-b border-theme-default flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <LogoIcon className="w-8 h-8 text-theme-primary-light" />
+                    <LogoIcon className="w-8 h-8 text-theme-primary-light flex-shrink-0" />
                     <h1 className="text-xl font-bold text-theme-default">PromptsCraft</h1>
                 </div>
             </div>
@@ -71,7 +71,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     onClick={onNewPrompt}
                     className="w-full px-4 py-2 bg-theme-primary hover:bg-theme-primary-hover text-white rounded-md font-semibold transition-colors flex items-center justify-center gap-2 text-sm"
                 >
-                    <PlusIcon className="w-5 h-5" />
+                    <PlusIcon className="w-5 h-5 flex-shrink-0" />
                     New Prompt
                 </button>
             </div>
@@ -99,7 +99,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                                 className="p-1 rounded-md hover:bg-theme-tertiary transition-colors"
                                 title="New Folder"
                             >
-                                <PlusIcon className="w-4 h-4" />
+                                <PlusIcon className="w-4 h-4 flex-shrink-0" />
                             </button>
                         </div>
                         <FolderTree
@@ -120,7 +120,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
             <div className="p-4 border-t border-theme-default">
                 <div className="flex items-center gap-2 mb-2">
-                    <BrainIcon className="w-5 h-5 text-theme-secondary" />
+                    <BrainIcon className="w-5 h-5 text-theme-secondary flex-shrink-0" />
                     <h4 className="text-sm font-semibold text-theme-secondary">AI Model Selection</h4>
                 </div>
                 <select

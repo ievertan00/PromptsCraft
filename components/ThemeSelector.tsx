@@ -21,7 +21,7 @@ const ThemeSelector: React.FC<ThemeSelectorProps> = ({ className }) => {
   return (
     <div className={className}>
       <div className="flex items-center gap-2 mb-2">
-        <SparklesIcon className="w-5 h-5 text-theme-secondary" />
+        <SparklesIcon className="w-5 h-5 text-theme-secondary flex-shrink-0" />
         <h4 className="text-sm font-semibold text-theme-secondary">Select Theme</h4>
       </div>
       <select

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { Prompt, Folder } from '../types';
-import { suggestTags, refinePrompt, suggestTitle } from '../services/geminiService';
+import { suggestTags, refinePrompt, suggestTitle, SupportedModel } from '../services/aiService';
 import { SparklesIcon } from './icons/SparklesIcon';
 import TagInput from './TagInput';
 import { XIcon } from './icons/XIcon';
@@ -11,6 +11,7 @@ interface PromptEditorProps {
     folders: Folder[];
     onSave: (prompt: Prompt) => void;
     onClose: () => void;
+    selectedModel: SupportedModel;
 }
 
 const AiSuggestion: React.FC<{ title: string; children: React.ReactNode; onAccept: () => void; onDismiss: () => void; }> = ({ title, children, onAccept, onDismiss }) => (
@@ -28,7 +29,7 @@ const AiSuggestion: React.FC<{ title: string; children: React.ReactNode; onAccep
 );
 
 
-const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, folders, onSave, onClose }) => {
+const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, folders, onSave, onClose, selectedModel }) => {
     const [prompt, setPrompt] = useState<Prompt>(initialPrompt);
     const [isAiLoading, setIsAiLoading] = useState(false);
     const [aiSuggestedTags, setAiSuggestedTags] = useState<string[] | null>(null);
@@ -83,27 +84,27 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
         if (!prompt.prompt || prompt.prompt.length < 50) return;
         setIsAiLoading(true);
         try {
-            const tags = await suggestTags(prompt.prompt);
+            const tags = await suggestTags(prompt.prompt, selectedModel);
             setAiSuggestedTags(tags);
         } catch (error) {
             console.error(error);
         } finally {
             setIsAiLoading(false);
         }
-    }, [prompt.prompt]);
+    }, [prompt.prompt, selectedModel]);
 
     const getAiTitleSuggestion = useCallback(async () => {
         if (!prompt.prompt || prompt.prompt.length < 50 || prompt.title) return; // Only suggest if title is empty
         setIsAiLoading(true);
         try {
-            const titleSuggestion = await suggestTitle(prompt.prompt);
+            const titleSuggestion = await suggestTitle(prompt.prompt, selectedModel);
             setSuggestedTitle(titleSuggestion);
         } catch (error) {
             console.error(error);
         } finally {
             setIsAiLoading(false);
         }
-    }, [prompt.prompt, prompt.title]);
+    }, [prompt.prompt, prompt.title, selectedModel]);
     
     useEffect(() => {
         if (typeof prompt.id === 'string' && prompt.id.startsWith('new-') && prompt.prompt.length > 50 && !initialFetchDone.current) {
@@ -136,7 +137,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
         if (!prompt.prompt) return;
         setIsAiLoading(true);
         try {
-            const result = await refinePrompt(prompt.prompt);
+            const result = await refinePrompt(prompt.prompt, selectedModel);
             setRefinedPrompt(result);
         } catch (error) {
             console.error(error);
@@ -165,6 +166,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
                         placeholder="Prompt Title"
                     />
                     <div className="flex items-center gap-4 ml-4">
+
                         <button 
                             onClick={() => onSave(prompt)}
                             className="px-4 py-2 bg-transparent border-2 border-theme-primary text-theme-primary rounded-md font-semibold transition-colors hover:bg-theme-primary hover:text-white disabled:border-theme-default disabled:text-theme-secondary disabled:cursor-not-allowed text-sm"

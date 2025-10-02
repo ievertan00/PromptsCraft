@@ -16,6 +16,7 @@ import {
     updatePromptFavoriteStatus
 } from './services/api';
 import type { Folder, Prompt } from './types';
+import { SupportedModel } from './services/aiService';
 
 import ErrorBoundary from './components/ErrorBoundary';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -27,6 +28,7 @@ const App: React.FC = () => {
     const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null);
     const [isEditorOpen, setIsEditorOpen] = useState(false);
     const [newFolderParentId, setNewFolderParentId] = useState<string | null | undefined>(undefined);
+    const [selectedModel, setSelectedModel] = useState<SupportedModel>('gemini');
 
     const fetchAndSetFolders = async () => {
         const fetchedFolders = await getFolders();
@@ -236,6 +238,8 @@ const App: React.FC = () => {
                         onNewFolderRequest={(parentId) => setNewFolderParentId(parentId)}
                         onCancelNewFolder={() => setNewFolderParentId(undefined)}
                         onNewPrompt={handleNewPrompt}
+                        selectedModel={selectedModel}
+                        onSelectedModelChange={setSelectedModel}
                     />
                 </div>
                 <main className="flex-1 overflow-y-auto">
@@ -257,6 +261,7 @@ const App: React.FC = () => {
                             folders={folders} 
                             onSave={handleSavePrompt}
                             onClose={() => setIsEditorOpen(false)}
+                            selectedModel={selectedModel}
                         />
                     </ErrorBoundary>
                 )}

@@ -19,3 +19,4 @@ prompts.db
 npm-debug.log*
 yarn-debug.log*
 
+.gemini

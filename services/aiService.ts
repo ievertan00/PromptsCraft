@@ -61,6 +61,7 @@ export const suggestTags = async (promptContent: string, selectedModel: Supporte
       const result = await (async () => {
         const streamingResp = await aiClient.generateContentStream({
             contents: [{ role: "user", parts: [{ text: prompt }] }],
+            systemInstruction: systemInstruction,
             generationConfig: { responseMimeType: 'application/json' },
         });
         let aggregatedResponse = "";
@@ -107,7 +108,7 @@ export const refinePrompt = async (promptContent: string, selectedModel: Support
     - Provide context and constraints.
     - Assign a role or persona to the AI.
     - Use clear and concise language.
-    Respond ONLY with the refined prompt text. Do not add any extra commentary or markdown formatting.`;
+    Respond ONLY with the refined prompt text. Do not answer the question directly or add any extra commentary.`;
 
   try {
     if (aiClient instanceof GenerativeModel && selectedModel === 'gemini') {

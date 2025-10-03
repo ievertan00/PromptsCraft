@@ -115,6 +115,7 @@ export const refinePrompt = async (promptContent: string, selectedModel: Support
         const result = await (async () => {
             const streamingResp = await aiClient.generateContentStream({
                 contents: [{ role: "user", parts: [{ text: promptContent }] }],
+                systemInstruction: systemInstruction,
             });
             let aggregatedResponse = "";
             for await (const chunk of streamingResp.stream) {
@@ -153,6 +154,7 @@ export const suggestTitle = async (promptContent: string, selectedModel: Support
         const result = await (async () => {
             const streamingResp = await aiClient.generateContentStream({
                 contents: [{ role: "user", parts: [{ text: promptContent }] }],
+                systemInstruction: systemInstruction,
             });
             let aggregatedResponse = "";
             for await (const chunk of streamingResp.stream) {

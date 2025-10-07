@@ -115,7 +115,7 @@ const PromptCard: React.FC<{
                 )}
             </div>
             <h3 className="font-semibold text-theme-default truncate">{prompt.title}</h3>
-            <p className="text-sm text-theme-secondary line-clamp-3 flex-1 overflow-hidden text-ellipsis break-words">{prompt.prompt}</p>
+            <p className="text-sm text-theme-secondary line-clamp-3 overflow-hidden text-ellipsis break-words whitespace-pre-wrap">{prompt.prompt}</p>
             <div className="flex flex-wrap gap-2">
                 {prompt.tags.slice(0, 3).map(tag => (
                     <span key={tag} className={`text-xs font-medium px-2 py-0.5 rounded-md ${getTagColorClasses(tag)}`}>{tag}</span>

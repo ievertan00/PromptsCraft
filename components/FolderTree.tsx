@@ -5,6 +5,7 @@ import { KebabMenuIcon } from './icons/KebabMenuIcon';
 import { PlusIcon } from './icons/PlusIcon';
 import { EditIcon } from './icons/EditIcon';
 import { DeleteIcon } from './icons/DeleteIcon';
+import ConfirmModal from './ConfirmModal';
 
 interface FolderTreeProps {
     folders: Folder[];
@@ -89,6 +90,7 @@ const FolderItem: React.FC<{
     const [editingName, setEditingName] = useState(folder.name);
     const [menuOpen, setMenuOpen] = useState(false);
     const [isDragOver, setIsDragOver] = useState(false);
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -230,12 +232,23 @@ const FolderItem: React.FC<{
                         <div ref={menuRef} className="absolute z-10 right-0 mt-2 w-40 bg-gray-700 border border-gray-600 rounded-md shadow-lg py-1">
                            <a onClick={(e) => { e.stopPropagation(); props.onNewFolderRequest(folder.id); setMenuOpen(false); }} className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-600 cursor-pointer"><PlusIcon className="w-4 h-4 flex-shrink-0" /> New Subfolder</a>
                            <a onClick={(e) => { e.stopPropagation(); setIsEditing(true); setMenuOpen(false); }} className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-600 cursor-pointer"><EditIcon className="w-4 h-4 flex-shrink-0" /> Rename</a>
-                           <a onClick={(e) => { e.stopPropagation(); if (window.confirm('Are you sure you want to delete this folder and all its contents?')) { onDeleteFolder(folder.id); } setMenuOpen(false); }} className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-400 hover:bg-gray-600 cursor-pointer"><DeleteIcon className="w-4 h-4 flex-shrink-0" /> Delete</a>
+                           <a onClick={(e) => { e.stopPropagation(); setIsConfirmOpen(true); setMenuOpen(false); }} className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-400 hover:bg-gray-600 cursor-pointer"><DeleteIcon className="w-4 h-4 flex-shrink-0" /> Delete</a>
                         </div>
                     )}
                 </div>
 
             </div>
+            <ConfirmModal
+                isOpen={isConfirmOpen}
+                onClose={() => setIsConfirmOpen(false)}
+                onConfirm={() => {
+                    onDeleteFolder(folder.id);
+                    setIsConfirmOpen(false);
+                }}
+                title="Delete Folder"
+                message={`Are you sure you want to delete the folder "${folder.name}" and all its contents? This action cannot be undone.`}
+                confirmText="Delete"
+            />
             {isOpen && (
                 <div>
                      {folder.children && folder.children.map(child => (

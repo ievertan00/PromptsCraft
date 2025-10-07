@@ -10,6 +10,7 @@ import { StarIcon } from './icons/StarIcon';
 import { StarFilledIcon } from './icons/StarFilledIcon';
 import { BriefcaseIcon } from './icons/BriefcaseIcon';
 import FolderSelectModal from './FolderSelectModal';
+import ConfirmModal from './ConfirmModal';
 
 interface PromptListProps {
     prompts: Prompt[];
@@ -32,6 +33,7 @@ const PromptCard: React.FC<{
 }> = ({ prompt, onDoubleClick, onDragStart, onDelete, onToggleFavorite, onMove, folders }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const menuRef = React.useRef<HTMLDivElement>(null);
 
     React.useEffect(() => {
@@ -101,9 +103,7 @@ const PromptCard: React.FC<{
                         <button 
                             onClick={(e) => {
                                 e.stopPropagation();
-                                if (window.confirm('Are you sure you want to delete this prompt?')) {
-                                    onDelete();
-                                }
+                                setIsConfirmOpen(true);
                                 setIsMenuOpen(false);
                             }}
                             className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-theme-hover flex items-center"
@@ -129,6 +129,17 @@ const PromptCard: React.FC<{
                     currentFolderId={prompt.folder_id}
                 />
             )}
+            <ConfirmModal
+                isOpen={isConfirmOpen}
+                onClose={() => setIsConfirmOpen(false)}
+                onConfirm={() => {
+                    onDelete();
+                    setIsConfirmOpen(false);
+                }}
+                title="Delete Prompt"
+                message={`Are you sure you want to delete the prompt "${prompt.title}"? This action cannot be undone.`}
+                confirmText="Delete"
+            />
         </div>
     );
 };

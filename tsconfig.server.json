@@ -6,5 +6,6 @@
     "noEmit": false,
     "outDir": "./dist"
   },
-  "include": ["server.ts"]
+    "include": ["server.ts", "services/database.ts", "services/serverAiService.ts"],
+    "exclude": ["node_modules", "dist"]
 }

@@ -1,6 +1,10 @@
 import express from 'express';
 import { initDB, getDB } from './services/database.js';
 import cors from 'cors';
+import { suggestTags, refinePrompt, suggestTitle } from './services/serverAiService.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const app = express();
 const port = 3001;
@@ -200,6 +204,40 @@ app.delete('/api/prompts/:id', (req, res) => {
         }
         res.json({ message: 'deleted' });
     });
+});
+
+// AI Service Endpoints
+app.post('/api/ai/suggest-tags', async (req, res) => {
+    try {
+        const { promptContent, selectedModel } = req.body;
+        const tags = await suggestTags(promptContent, selectedModel);
+        res.json({ suggestedTags: tags });
+    } catch (error) {
+        console.error('Error in /api/ai/suggest-tags:', error);
+        res.status(500).json({ error: 'Failed to get AI tag suggestions.', details: error.message });
+    }
+});
+
+app.post('/api/ai/refine-prompt', async (req, res) => {
+    try {
+        const { promptContent, selectedModel } = req.body;
+        const refined = await refinePrompt(promptContent, selectedModel);
+        res.json({ refinedPrompt: refined });
+    } catch (error) {
+        console.error('Error in /api/ai/refine-prompt:', error);
+        res.status(500).json({ error: 'Failed to refine prompt.', details: error.message });
+    }
+});
+
+app.post('/api/ai/suggest-title', async (req, res) => {
+    try {
+        const { promptContent, selectedModel } = req.body;
+        const title = await suggestTitle(promptContent, selectedModel);
+        res.json({ suggestedTitle: title });
+    } catch (error) {
+        console.error('Error in /api/ai/suggest-title:', error);
+        res.status(500).json({ error: 'Failed to suggest title.', details: error.message });
+    }
 });
 
 

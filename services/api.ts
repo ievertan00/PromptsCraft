@@ -38,6 +38,14 @@ export const getAllPrompts = async (): Promise<Prompt[]> => {
     }));
 };
 
+export const getTopTags = async (): Promise<string[]> => {
+    const response = await fetch(`${API_URL}/tags/top`);
+    if (!response.ok) {
+        throw new Error('Failed to fetch top tags');
+    }
+    return await response.json();
+};
+
 export const savePrompt = async (promptToSave: Prompt): Promise<Prompt> => {
     const isNew = typeof promptToSave.id === 'string' && promptToSave.id.startsWith('new-');
     const method = isNew ? 'POST' : 'PUT';

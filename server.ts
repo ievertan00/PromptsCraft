@@ -206,6 +206,39 @@ app.delete('/api/prompts/:id', (req, res) => {
     });
 });
 
+// Tag API endpoints
+app.get('/api/tags/top', (req, res) => {
+    const db = getDB();
+    db.all("SELECT tags FROM prompts", [], (err, rows: { tags: string }[]) => {
+        if (err) {
+            res.status(400).json({"error": err.message});
+            return;
+        }
+
+        const tagCounts = new Map<string, number>();
+        rows.forEach(row => {
+            try {
+                const tags = JSON.parse(row.tags);
+                if (Array.isArray(tags)) {
+                    tags.forEach(tag => {
+                        tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+                    });
+                }
+            } catch (e) {
+                // Ignore prompts with invalid tag formats
+            }
+        });
+
+        const sortedTags = Array.from(tagCounts.entries())
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 15)
+            .map(entry => entry[0]);
+
+        res.json(sortedTags);
+    });
+});
+
+
 // AI Service Endpoints
 app.post('/api/ai/suggest-tags', async (req, res) => {
     try {

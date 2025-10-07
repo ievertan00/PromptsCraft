@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import type { Prompt } from '../types';
-import { PlusIcon } from './icons/PlusIcon';
+import React, { useState, useMemo, useEffect } from 'react';
+import type { Prompt, Folder } from '../types';
+import { getTopTags } from '../services/api';
 import { KebabMenuIcon } from './icons/KebabMenuIcon';
 import { getTagColorClasses } from '../constants/colors';
 import { SearchIcon } from './icons/SearchIcon';
@@ -76,7 +76,7 @@ const PromptCard: React.FC<{
                     className="p-1 rounded-full bg-theme-secondary opacity-0 group-hover:opacity-100 hover:bg-theme-hover focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-theme-primary-light transition-opacity"
                     aria-label="Prompt options"
                 >
-                    <EditIcon className="w-5 h-5 text-theme-secondary" />
+                    <KebabMenuIcon className="w-5 h-5 text-theme-secondary" />
                 </button>
                 {isMenuOpen && (
                     <div className="absolute right-0 mt-8 w-48 bg-theme-secondary rounded-md shadow-lg z-10">
@@ -132,19 +132,38 @@ const PromptCard: React.FC<{
         </div>
     );
 };
+
 const PromptList: React.FC<PromptListProps> = ({ prompts, selectedFolderName, onEditPrompt, onDeletePrompt, onToggleFavorite, folders, onMovePrompt }) => {
     const [searchTerm, setSearchTerm] = useState('');
+    const [topTags, setTopTags] = useState<string[]>([]);
+
+    useEffect(() => {
+        const fetchTopTags = async () => {
+            try {
+                const tags = await getTopTags();
+                setTopTags(tags);
+            } catch (error) {
+                console.error("Failed to fetch top tags:", error);
+            }
+        };
+        fetchTopTags();
+    }, []);
 
     const filteredPrompts = useMemo(() => {
         if (!searchTerm) return prompts;
+        const lowercasedSearchTerm = searchTerm.toLowerCase();
         return prompts.filter(p => 
-            p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            p.prompt.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            p.tags.some(t => t.toLowerCase().includes(searchTerm.toLowerCase()))
+            p.title.toLowerCase().includes(lowercasedSearchTerm) ||
+            p.prompt.toLowerCase().includes(lowercasedSearchTerm) ||
+            p.tags.some(t => t.toLowerCase().includes(lowercasedSearchTerm.startsWith('#') ? lowercasedSearchTerm.substring(1) : lowercasedSearchTerm))
         );
     }, [prompts, searchTerm]);
 
     const favoritePrompts = useMemo(() => prompts.filter(p => p.isFavorite), [prompts]);
+
+    const handleTagClick = (tag: string) => {
+        setSearchTerm(`#${tag}`);
+    };
 
     return (
         <div className="p-8 space-y-8">
@@ -168,23 +187,38 @@ const PromptList: React.FC<PromptListProps> = ({ prompts, selectedFolderName, on
             
             {searchTerm.length === 0 && (
                 <>
-                    {favoritePrompts.length > 0 && (
-                        <section>
+                    {(topTags.length > 0 || favoritePrompts.length > 0) && (
+                         <section>
                             <h2 className="text-lg font-semibold mb-4">Quick Access</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {favoritePrompts.map(prompt => (
-                                    <PromptCard 
-                                        key={prompt.id} 
-                                        prompt={prompt} 
-                                        onDoubleClick={() => onEditPrompt(prompt)}
-                                        onDragStart={(e) => e.dataTransfer.setData('application/prompt-id', prompt.id)}
-                                        onDelete={() => onDeletePrompt(prompt.id)}
-                                        onToggleFavorite={() => onToggleFavorite(prompt.id)}
-                                        onMove={onMovePrompt}
-                                        folders={folders}
-                                    />
-                                ))}
-                            </div>
+                            {topTags.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mb-4">
+                                    {topTags.map(tag => (
+                                        <button 
+                                            key={tag}
+                                            onClick={() => handleTagClick(tag)}
+                                            className={`text-xs font-medium px-2.5 py-1 rounded-full transition-colors ${getTagColorClasses(tag)} hover:brightness-125`}
+                                        >
+                                            #{tag}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                            {favoritePrompts.length > 0 && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {favoritePrompts.map(prompt => (
+                                        <PromptCard 
+                                            key={prompt.id} 
+                                            prompt={prompt} 
+                                            onDoubleClick={() => onEditPrompt(prompt)}
+                                            onDragStart={(e) => e.dataTransfer.setData('application/prompt-id', prompt.id)}
+                                            onDelete={() => onDeletePrompt(prompt.id)}
+                                            onToggleFavorite={() => onToggleFavorite(prompt.id)}
+                                            onMove={onMovePrompt}
+                                            folders={folders}
+                                        />
+                                    ))}
+                                </div>
+                            )}
                         </section>
                     )}
                 </>

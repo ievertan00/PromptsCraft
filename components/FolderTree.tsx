@@ -55,7 +55,7 @@ const NewFolderInput: React.FC<{
             style={{ paddingLeft: `${level * 16 + 8}px` }}
         >
              <span className="w-6 mr-2"></span>
-             <FolderIcon className="w-5 h-5 mr-2 text-gray-400" />
+             <FolderIcon className="w-4 h-4 mr-2 text-gray-400" />
             <input
                 ref={inputRef}
                 type="text"
@@ -202,7 +202,7 @@ const FolderItem: React.FC<{
                         )}
                     </button>
                 ) : <span className="w-6 mr-2"></span>}
-                {isOpen ? <FolderOpenIcon className="w-5 h-5 mr-2 text-theme-primary-light shrink-0" /> : <FolderIcon className="w-5 h-5 mr-2 text-theme-secondary shrink-0" />}
+                {isOpen ? <FolderOpenIcon className="w-4 h-4 mr-2 text-theme-primary-light shrink-0" /> : <FolderIcon className="w-4 h-4 mr-2 text-theme-secondary shrink-0" />}
                 
                 {isEditing ? (
                      <input

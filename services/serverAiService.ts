@@ -169,7 +169,7 @@ export const suggestTags = async (promptContent: string, selectedModel: Supporte
 };
 
 export const refinePrompt = async (promptContent: string, selectedModel: SupportedModel, options: { persona?: boolean; task?: boolean; context?: boolean; format?: boolean; max_tokens?: number }): Promise<string> => {
-  let systemInstruction = `You are a world-class prompt engineering expert. Your task is to refine the user-submitted prompt to be more effective for large language models. The refined prompt MUST be highly specific, clear, and ready for immediate use.\n\n`;
+  let systemInstruction = `You are a world-class prompt engineering expert. Your task is to refine the user-submitted prompt to be more effective for large language models.\nFollow these best practices based on the user's selections:\n`;
 
   if (options.persona ?? true) {
     systemInstruction += `**1. Persona:** Assign a highly relevant and authoritative role or persona to the LLM (e.g., 'Act as a senior software engineer specialized in design patterns').\n`;
@@ -187,6 +187,7 @@ export const refinePrompt = async (promptContent: string, selectedModel: Support
   systemInstruction += `\n**Instructions:**
   - Analyze the user's original prompt and integrate the enabled refinement criteria above.
   - Generate ONLY the complete, optimized prompt text.
+  - Detect the language of the user-submitted prompt and provide the refined prompt in that same language.
   - Do NOT include any commentary, explanations, or dialogue before or after the refined prompt.`;
 
   return generateContent(systemInstruction, promptContent, selectedModel, { max_tokens: options.max_tokens });
@@ -195,7 +196,6 @@ export const refinePrompt = async (promptContent: string, selectedModel: Support
 export const suggestTitle = async (promptContent: string, selectedModel: SupportedModel): Promise<string> => {
   const systemInstruction = `You are an expert at summarizing text into concise, descriptive titles. Your task is to generate a short, clear, and relevant title for the given prompt content.
     - The title should be no more than 10 words.
-    - The tone MUST be descriptive, neutral, and suitable for a UI element.
     - Detect the language of the given prompt content and respond ONLY with the suggested title text in that same language.
     - Respond ONLY with the suggested title text. Do not add any extra commentary or markdown formatting.`;
 

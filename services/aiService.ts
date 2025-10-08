@@ -20,13 +20,13 @@ export const suggestTags = async (promptContent: string, selectedModel: Supporte
     return data.suggestedTags;
 };
 
-export const refinePrompt = async (promptContent: string, selectedModel: SupportedModel): Promise<string> => {
+export const refinePrompt = async (promptContent: string, selectedModel: SupportedModel, options: { persona?: boolean; task?: boolean; context?: boolean; format?: boolean; max_tokens?: number }): Promise<string> => {
     const response = await fetch(`${API_BASE_URL}/refine-prompt`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ promptContent, selectedModel }),
+        body: JSON.stringify({ promptContent, selectedModel, ...options }),
     });
 
     if (!response.ok) {

@@ -45,28 +45,96 @@ const generateContent = async (
   systemInstruction: string,
   prompt: string,
   selectedModel: SupportedModel,
-  response_format: { type: "json_object" } | undefined = undefined
+  options: { response_format?: { type: "json_object" }; max_tokens?: number } = {}
 ): Promise<string> => {
   const aiClient = getAiClient(selectedModel);
+  const { response_format, max_tokens } = options;
 
-  try {
-    if (aiClient instanceof GenerativeModel && selectedModel === 'gemini') {
-      const result = await aiClient.generateContent({
-        contents: [{ role: "user", parts: [{ text: systemInstruction + '\n\n' + prompt }] }],
-        generationConfig: { responseMimeType: response_format?.type === 'json_object' ? 'application/json' : 'text/plain' },
-      });
-      return result.response.text();
-    } else if (aiClient instanceof OpenAI && selectedModel === 'deepseek') {
-      const completion = await aiClient.chat.completions.create({
-        messages: [{ role: "system", content: systemInstruction }, { role: "user", content: prompt }],
-        model: "deepseek-chat",
-        response_format: response_format,
-      });
-      return completion.choices[0].message.content ?? "";
-    } else {
-      throw new Error("Invalid AI client or model configuration.");
-    }
-  } catch (error) {
+        try {
+
+          let text: string = '';
+
+      
+
+          if (aiClient instanceof GenerativeModel && selectedModel === 'gemini') {
+
+            const result = await aiClient.generateContent({
+
+              contents: [{ role: "user", parts: [{ text: systemInstruction + '\n\n' + prompt }] }],
+
+              generationConfig: { 
+
+                  responseMimeType: response_format?.type === 'json_object' ? 'application/json' : 'text/plain',
+
+                  maxOutputTokens: max_tokens,
+
+              },
+
+            });
+
+                        const candidate = result.response.candidates?.[0];
+
+                        if (candidate) {
+
+                          text = result.response.text();
+
+                          if (candidate.finishReason === 'MAX_TOKENS') {
+
+                            text += '\n[...output truncated due to token limit]';
+
+                          }
+
+                        }
+
+                      } else if (aiClient instanceof OpenAI && selectedModel === 'deepseek') {
+
+                        const completion = await aiClient.chat.completions.create({
+
+                          messages: [{ role: "system", content: systemInstruction }, { role: "user", content: prompt }],
+
+                          model: "deepseek-chat",
+
+                          response_format: response_format,
+
+                          max_tokens: max_tokens,
+
+                        });
+
+                        const choice = completion.choices[0];
+
+                        if (choice) {
+
+                          text = choice.message?.content ?? '';
+
+                          if (choice.finish_reason === 'length') {
+
+                            text += '\n[...output truncated due to token limit]';
+
+                          }
+
+                        }
+
+          } else {
+
+            throw new Error("Invalid AI client or model configuration.");
+
+          }
+
+      
+
+          if (!text.trim()) {
+
+              return '[AI returned an empty or invalid response]';
+
+          }
+
+      
+
+          return text;
+
+      
+
+        } catch (error) {
     console.error(`Error generating content with ${selectedModel} API:`, error);
     throw new Error(`Failed to generate content with ${selectedModel}.`);
   }
@@ -86,7 +154,7 @@ export const suggestTags = async (promptContent: string, selectedModel: Supporte
     `;
 
   try {
-    const jsonText = await generateContent(systemInstruction, prompt, selectedModel, { type: "json_object" });
+    const jsonText = await generateContent(systemInstruction, prompt, selectedModel, { response_format: { type: "json_object" } });
     const result = JSON.parse(jsonText.trim());
 
     if (Array.isArray(result.suggestedTags)) {
@@ -100,22 +168,34 @@ export const suggestTags = async (promptContent: string, selectedModel: Supporte
   }
 };
 
-export const refinePrompt = async (promptContent: string, selectedModel: SupportedModel): Promise<string> => {
-  const systemInstruction = `You are a world-class prompt engineering expert. Your task is to refine the user-submitted prompt to be more effective for large language models.
-    Follow these best practices:
-    - Add clarity and specificity.
-    - Define the desired format for the output.
-    - Provide context and constraints.
-    - Assign a role or persona to the AI.
-    - Use clear and concise language.
-    Respond ONLY with the refined prompt text. Do not answer the question directly or add any extra commentary.`;
+export const refinePrompt = async (promptContent: string, selectedModel: SupportedModel, options: { persona?: boolean; task?: boolean; context?: boolean; format?: boolean; max_tokens?: number }): Promise<string> => {
+  let systemInstruction = `You are a world-class prompt engineering expert. Your task is to refine the user-submitted prompt to be more effective for large language models. The refined prompt MUST be highly specific, clear, and ready for immediate use.\n\n`;
 
-  return generateContent(systemInstruction, promptContent, selectedModel);
+  if (options.persona ?? true) {
+    systemInstruction += `**1. Persona:** Assign a highly relevant and authoritative role or persona to the LLM (e.g., 'Act as a senior software engineer specialized in design patterns').\n`;
+  }
+  if (options.task ?? true) {
+    systemInstruction += `**2. Task:** Clarify and decompose the primary task into specific, actionable steps or sub-objectives. Use strong, imperative verbs.\n`;;
+  }
+  if (options.context ?? true) {
+    systemInstruction += `**3. Context:** Explicitly incorporate relevant background information, key constraints, and necessary domain-specific knowledge to reduce ambiguity.\n`;
+  }
+  if (options.format ?? true) {
+    systemInstruction += `**4. Format:** Strictly specify the desired output format, structure, and style (e.g., "Respond in a JSON object," "Use a 5-point bulleted list in a professional tone").\n`;
+  }
+
+  systemInstruction += `\n**Instructions:**
+  - Analyze the user's original prompt and integrate the enabled refinement criteria above.
+  - Generate ONLY the complete, optimized prompt text.
+  - Do NOT include any commentary, explanations, or dialogue before or after the refined prompt.`;
+
+  return generateContent(systemInstruction, promptContent, selectedModel, { max_tokens: options.max_tokens });
 };
 
 export const suggestTitle = async (promptContent: string, selectedModel: SupportedModel): Promise<string> => {
   const systemInstruction = `You are an expert at summarizing text into concise, descriptive titles. Your task is to generate a short, clear, and relevant title for the given prompt content.
     - The title should be no more than 10 words.
+    - The tone MUST be descriptive, neutral, and suitable for a UI element.
     - Detect the language of the given prompt content and respond ONLY with the suggested title text in that same language.
     - Respond ONLY with the suggested title text. Do not add any extra commentary or markdown formatting.`;
 

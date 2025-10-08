@@ -253,8 +253,8 @@ app.post('/api/ai/suggest-tags', async (req, res) => {
 
 app.post('/api/ai/refine-prompt', async (req, res) => {
     try {
-        const { promptContent, selectedModel } = req.body;
-        const refined = await refinePrompt(promptContent, selectedModel);
+        const { promptContent, selectedModel, persona, task, context, format, max_tokens } = req.body;
+        const refined = await refinePrompt(promptContent, selectedModel, { persona, task, context, format, max_tokens });
         res.json({ refinedPrompt: refined });
     } catch (error) {
         console.error('Error in /api/ai/refine-prompt:', error);

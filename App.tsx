@@ -80,7 +80,6 @@ const App: React.FC = () => {
             folder_id: defaultFolderId,
             title: '',
             prompt: '',
-            context: '',
             tags: [],
             createdAt: new Date().toISOString(),
         };

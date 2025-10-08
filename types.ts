@@ -14,5 +14,10 @@ export interface Prompt {
     tags: string[] | string; // Allow string for JSON parsing
     createdAt: string;
     isFavorite?: boolean;
+    persona?: boolean;
+    task?: boolean;
+    context?: boolean;
+    format?: boolean;
+    max_tokens?: number;
 }
 

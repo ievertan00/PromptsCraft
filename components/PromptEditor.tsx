@@ -137,7 +137,13 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
         if (!prompt.prompt) return;
         setIsAiLoading(true);
         try {
-            const result = await refinePrompt(prompt.prompt, selectedModel);
+            const result = await refinePrompt(prompt.prompt, selectedModel, {
+                persona: prompt.persona ?? true,
+                task: prompt.task ?? true,
+                context: prompt.context ?? true,
+                format: prompt.format ?? true,
+                max_tokens: prompt.max_tokens ?? 5000,
+            });
             setRefinedPrompt(result);
         } catch (error) {
             console.error(error);
@@ -231,8 +237,31 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
                                 {isAiLoading ? 'Refining...' : 'Refine with AI'}
                             </button>
                         </div>
+                        <div className="flex items-center gap-4 mb-2 text-sm text-theme-secondary">
+                            <h4 className="font-medium">Refinement Settings:</h4>
+                            <label className="flex items-center gap-1.5 cursor-pointer">
+                                <input type="checkbox" checked={prompt.persona ?? true} onChange={e => setPrompt({...prompt, persona: e.target.checked})} className="form-checkbox h-4 w-4 text-theme-primary bg-theme-default border-theme-primary-light rounded focus:ring-theme-primary" />
+                                Persona
+                            </label>
+                            <label className="flex items-center gap-1.5 cursor-pointer">
+                                <input type="checkbox" checked={prompt.task ?? true} onChange={e => setPrompt({...prompt, task: e.target.checked})} className="form-checkbox h-4 w-4 text-theme-primary bg-theme-default border-theme-primary-light rounded focus:ring-theme-primary" />
+                                Task
+                            </label>
+                            <label className="flex items-center gap-1.5 cursor-pointer">
+                                <input type="checkbox" checked={prompt.context ?? true} onChange={e => setPrompt({...prompt, context: e.target.checked})} className="form-checkbox h-4 w-4 text-theme-primary bg-theme-default border-theme-primary-light rounded focus:ring-theme-primary" />
+                                Context
+                            </label>
+                            <label className="flex items-center gap-1.5 cursor-pointer">
+                                <input type="checkbox" checked={prompt.format ?? true} onChange={e => setPrompt({...prompt, format: e.target.checked})} className="form-checkbox h-4 w-4 text-theme-primary bg-theme-default border-theme-primary-light rounded focus:ring-theme-primary" />
+                                Format
+                            </label>
+                            <label className="flex items-center gap-1.5 cursor-pointer">
+                                Max Tokens:
+                                <input type="number" value={prompt.max_tokens ?? 5000} onChange={e => setPrompt({...prompt, max_tokens: parseInt(e.target.value, 10)})} className="w-20 bg-theme-default border border-theme-primary-light rounded px-2 py-0.5 focus:ring-theme-primary focus:outline-none" />
+                            </label>
+                        </div>
 
-                        {refinedPrompt ? (
+                        {refinedPrompt !== null ? (
                             <div className="grid grid-cols-2 gap-4 flex-1">
                                 <div>
                                     <h3 className="text-xs font-semibold uppercase text-theme-secondary mb-2">Original</h3>

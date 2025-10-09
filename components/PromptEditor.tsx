@@ -32,6 +32,8 @@ const AiSuggestion: React.FC<{ title: string; children: React.ReactNode; onAccep
 const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, folders, onSave, onClose, selectedModel }) => {
     const [prompt, setPrompt] = useState<Prompt>(initialPrompt);
     const [isAiLoading, setIsAiLoading] = useState(false);
+    const [isGeneratingTitleAndTags, setIsGeneratingTitleAndTags] = useState(false);
+    const [isRefiningPrompt, setIsRefiningPrompt] = useState(false);
     const [aiSuggestedTags, setAiSuggestedTags] = useState<string[] | null>(null);
     const [suggestedTitle, setSuggestedTitle] = useState<string | null>(null);
     const [refinedPrompt, setRefinedPrompt] = useState<string | null>(null);
@@ -80,42 +82,9 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
     };
 
 
-    const getAiSuggestions = useCallback(async () => {
-        if (!prompt.prompt || prompt.prompt.length < 50) return;
-        setIsAiLoading(true);
-        try {
-            const tags = await suggestTags(prompt.prompt, selectedModel);
-            setAiSuggestedTags(tags);
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setIsAiLoading(false);
-        }
-    }, [prompt.prompt, selectedModel]);
 
-    const getAiTitleSuggestion = useCallback(async () => {
-        if (!prompt.prompt || prompt.prompt.length < 50 || prompt.title) return; // Only suggest if title is empty
-        setIsAiLoading(true);
-        try {
-            const titleSuggestion = await suggestTitle(prompt.prompt, selectedModel);
-            setSuggestedTitle(titleSuggestion);
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setIsAiLoading(false);
-        }
-    }, [prompt.prompt, prompt.title, selectedModel]);
     
-    useEffect(() => {
-        if (typeof prompt.id === 'string' && prompt.id.startsWith('new-') && prompt.prompt.length > 50 && !initialFetchDone.current) {
-            initialFetchDone.current = true; // Set flag immediately to prevent re-triggering
-            const timer = setTimeout(() => {
-                getAiSuggestions();
-                getAiTitleSuggestion();
-            }, 1500);
-            return () => clearTimeout(timer);
-        }
-    }, [prompt.id, prompt.prompt, getAiSuggestions, getAiTitleSuggestion]);
+
 
 
     const getFolderPath = (folderId: string): string => {
@@ -135,6 +104,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
 
     const handleRefinePrompt = async () => {
         if (!prompt.prompt) return;
+        setIsRefiningPrompt(true);
         setIsAiLoading(true);
         try {
             const result = await refinePrompt(prompt.prompt, selectedModel, {
@@ -148,6 +118,28 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
         } catch (error) {
             console.error(error);
         } finally {
+            setIsRefiningPrompt(false);
+            setIsAiLoading(false);
+        }
+    };
+
+    const handleSuggestTitleAndTags = async () => {
+        if (!prompt.prompt || prompt.prompt.length < 50) return;
+        setIsGeneratingTitleAndTags(true);
+        setIsAiLoading(true);
+        try {
+            // Get both suggestions in parallel
+            const [tags, titleSuggestion] = await Promise.all([
+                suggestTags(prompt.prompt, selectedModel),
+                suggestTitle(prompt.prompt, selectedModel)
+            ]);
+            
+            setAiSuggestedTags(tags);
+            setSuggestedTitle(titleSuggestion);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsGeneratingTitleAndTags(false);
             setIsAiLoading(false);
         }
     };
@@ -232,10 +224,16 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
                                     {isCopied ? <span className="text-xs text-theme-primary">Copied!</span> : <ClipboardIcon className="w-4 h-4" />}
                                 </button>
                             </div>
-                            <button onClick={handleRefinePrompt} disabled={isAiLoading || !prompt.prompt} className="flex items-center gap-2 px-3 py-1.5 bg-theme-tertiary hover:bg-theme-default text-theme-default rounded-md text-sm font-semibold transition-colors disabled:opacity-50">
-                                <SparklesIcon className="w-4 h-4" />
-                                {isAiLoading ? 'Refining...' : 'Refine with AI'}
-                            </button>
+                            <div className="flex gap-2">
+                                <button onClick={handleSuggestTitleAndTags} disabled={isGeneratingTitleAndTags || !prompt.prompt} className="flex items-center gap-2 px-3 py-1.5 bg-theme-tertiary hover:bg-theme-default text-theme-default rounded-md text-sm font-semibold transition-colors disabled:opacity-50">
+                                    <SparklesIcon className="w-4 h-4" />
+                                    {isGeneratingTitleAndTags ? 'Generating...' : 'Suggest Title & Tags'}
+                                </button>
+                                <button onClick={handleRefinePrompt} disabled={isRefiningPrompt || !prompt.prompt} className="flex items-center gap-2 px-3 py-1.5 bg-theme-tertiary hover:bg-theme-default text-theme-default rounded-md text-sm font-semibold transition-colors disabled:opacity-50">
+                                    <SparklesIcon className="w-4 h-4" />
+                                    {isRefiningPrompt ? 'Refining...' : 'Refine with AI'}
+                                </button>
+                            </div>
                         </div>
                         <div className="flex items-center gap-4 mb-2 text-sm text-theme-secondary">
                             <h4 className="font-medium">Refinement Settings:</h4>

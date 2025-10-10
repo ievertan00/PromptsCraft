@@ -13,15 +13,6 @@ export const getDB = () => {
     return db;
 };
 
-const createSettingsTable = (callback: (err: Error | null) => void) => {
-    getDB().run(`CREATE TABLE IF NOT EXISTS settings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        key TEXT UNIQUE,
-        value TEXT
-    )`, (err) => {
-        callback(err);
-    });
-}
 
 export const initDB = (callback: (err: Error | null) => void) => {
     db = new sqlite3Verbose.Database(DBSOURCE, (err) => {
@@ -67,20 +58,7 @@ export const initDB = (callback: (err: Error | null) => void) => {
                         }
                         const hasIsFavoriteColumn = columns.some((col: any) => col.name === 'is_favorite');
 
-                        if (!hasIsFavoriteColumn) {
-                            console.log('Migrating prompts table: adding is_favorite column.');
-                            db.run(`ALTER TABLE prompts ADD COLUMN is_favorite INTEGER DEFAULT 0`, (err) => {
-                                if (err) {
-                                    console.error("Error adding is_favorite column:", err);
-                                    callback(err);
-                                } else {
-                                    console.log('is_favorite column added to prompts table.');
-                                    createSettingsTable(callback);
-                                }
-                            });
-                        } else {
-                            createSettingsTable(callback);
-                        }
+                        
                     });
                 });
             });

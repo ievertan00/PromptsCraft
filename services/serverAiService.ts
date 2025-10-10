@@ -1,203 +1,223 @@
+/*
+Optimized TypeScript module: unified clients for Gemini (Google Generative AI) and DeepSeek (OpenAI-compatible),
+with defensive parsing, singleton client instances, optional caching, retries, and improved typings.
 
-import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
-import OpenAI from "openai";
+Updated: moved max_tokens into prompt instructions instead of a hard API limit to reduce truncation.
+*/
+
 import dotenv from 'dotenv';
+import OpenAI from 'openai';
+import type { GenerativeModel } from '@google/generative-ai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 dotenv.config();
 
-// Function to get API keys from environment variables
-const getApiKeys = () => {
-  const geminiApiKey = process.env.GEMINI_API_KEY;
-  const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
-
-  if (!geminiApiKey) {
-    throw new Error("GEMINI_API_KEY is not set in the .env file on the server.");
-  }
-  if (!deepseekApiKey) {
-    throw new Error("DEEPSEEK_API_KEY is not set in the .env file on the server.");
-  }
-
-  return { geminiApiKey, deepseekApiKey };
-};
-
-// Type definition for the supported AI models
 export type SupportedModel = 'gemini' | 'deepseek';
 
-// Function to initialize and get the correct AI client
-const getAiClient = (model: SupportedModel) => {
+type GeminiClient = GenerativeModel;
+type DeepseekClient = OpenAI;
+
+type ClientType = { kind: 'gemini'; client: GeminiClient } | { kind: 'deepseek'; client: DeepseekClient };
+
+interface GenerateOptions {
+  response_format?: { type: 'json_object' } | null;
+  max_tokens?: number;
+  retries?: number;
+}
+
+const DEFAULT_RETRIES = 2;
+const CACHE_MAX_ENTRIES = 200;
+const requestCache = new Map<string, string>();
+
+function cacheSet(key: string, value: string) {
+  if (requestCache.size >= CACHE_MAX_ENTRIES) {
+    const firstKey = requestCache.keys().next().value;
+    if (firstKey) requestCache.delete(firstKey);
+  }
+  requestCache.set(key, value);
+}
+
+function cacheGet(key: string) {
+  return requestCache.get(key);
+}
+
+function makeCacheKey(systemInstruction: string, prompt: string, model: SupportedModel, options?: GenerateOptions) {
+  return JSON.stringify({ systemInstruction, prompt, model, options });
+}
+
+function getApiKeys() {
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
+  if (!geminiApiKey) throw new Error('GEMINI_API_KEY is not set.');
+  if (!deepseekApiKey) throw new Error('DEEPSEEK_API_KEY is not set.');
+  return { geminiApiKey, deepseekApiKey };
+}
+
+const clientStore = new Map<SupportedModel, ClientType>();
+
+export function getAiClient(model: SupportedModel): ClientType {
+  const existing = clientStore.get(model);
+  if (existing) return existing;
   const { geminiApiKey, deepseekApiKey } = getApiKeys();
 
   if (model === 'gemini') {
-    const modelName = 'gemini-2.5-flash';
-    return new GoogleGenerativeAI(geminiApiKey).getGenerativeModel({ model: modelName });
-  } else if (model === 'deepseek') {
-    return new OpenAI({
-      baseURL: 'https://api.deepseek.com',
-      apiKey: deepseekApiKey,
-    });
-  } else {
-    throw new Error(`Unsupported model: ${model}`);
+    const client = new GoogleGenerativeAI(geminiApiKey).getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const wrapper: ClientType = { kind: 'gemini', client };
+    clientStore.set('gemini', wrapper);
+    return wrapper;
   }
-};
 
-// Generic function to generate content from the selected AI model
-const generateContent = async (
+  if (model === 'deepseek') {
+    const client = new OpenAI({ apiKey: deepseekApiKey, baseURL: 'https://api.deepseek.com' });
+    const wrapper: ClientType = { kind: 'deepseek', client };
+    clientStore.set('deepseek', wrapper);
+    return wrapper;
+  }
+
+  throw new Error(`Unsupported model: ${model}`);
+}
+
+function extractTextFromGemini(result: any): string {
+  try {
+    if (result?.response?.text && typeof result.response.text === 'function') {
+      const t = result.response.text();
+      if (t) return String(t);
+    }
+    const candidate = result?.response?.candidates?.[0];
+    if (!candidate) return '';
+    const content = candidate.content;
+    if (Array.isArray(content) && content.length) {
+      const first = content[0];
+      if (typeof first === 'string') return first;
+      if (Array.isArray(first.parts) && first.parts.length) return String(first.parts.join(''));
+      if (typeof first.text === 'string') return first.text;
+    }
+    if (typeof candidate.text === 'string') return candidate.text;
+    return '';
+  } catch {
+    return '';
+  }
+}
+
+async function withRetries<T>(fn: () => Promise<T>, retries = DEFAULT_RETRIES): Promise<T> {
+  let attempt = 0;
+  let lastErr: any = null;
+  while (attempt <= retries) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      await new Promise((res) => setTimeout(res, 200 * Math.pow(2, attempt)));
+      attempt++;
+    }
+  }
+  throw lastErr;
+}
+
+export async function generateContent(
   systemInstruction: string,
   prompt: string,
   selectedModel: SupportedModel,
-  options: { response_format?: { type: "json_object" }; max_tokens?: number } = {}
-): Promise<string> => {
-  const aiClient = getAiClient(selectedModel);
-  const { response_format, max_tokens } = options;
+  options: GenerateOptions = {}
+): Promise<string> {
+  const response_format = options.response_format ?? null;
+  const retries = options.retries ?? DEFAULT_RETRIES;
 
-        try {
+  const cacheKey = makeCacheKey(systemInstruction, prompt, selectedModel, options);
+  const cached = cacheGet(cacheKey);
+  if (cached) return cached;
 
-          let text: string = '';
+  const clientWrapper = getAiClient(selectedModel);
 
-      
+  const callApi = async () => {
+    const maxTokenNote = options.max_tokens
+      ? `\n(Note: You may produce up to approximately ${options.max_tokens} tokens of output if needed.)`
+      : '';
 
-          if (aiClient instanceof GenerativeModel && selectedModel === 'gemini') {
+    const fullPrompt = `${systemInstruction}\n\n${prompt}${maxTokenNote}`;
 
-            const result = await aiClient.generateContent({
-
-              contents: [{ role: "user", parts: [{ text: systemInstruction + '\n\n' + prompt }] }],
-
-              generationConfig: { 
-
-                  responseMimeType: response_format?.type === 'json_object' ? 'application/json' : 'text/plain',
-
-                  maxOutputTokens: max_tokens,
-
-              },
-
-            });
-
-                        const candidate = result.response.candidates?.[0];
-
-                        if (candidate) {
-
-                          text = result.response.text();
-
-                          if (candidate.finishReason === 'MAX_TOKENS') {
-
-                            text += '\n[...output truncated due to token limit]';
-
-                          }
-
-                        }
-
-                      } else if (aiClient instanceof OpenAI && selectedModel === 'deepseek') {
-
-                        const completion = await aiClient.chat.completions.create({
-
-                          messages: [{ role: "system", content: systemInstruction }, { role: "user", content: prompt }],
-
-                          model: "deepseek-chat",
-
-                          response_format: response_format,
-
-                          max_tokens: max_tokens,
-
-                        });
-
-                        const choice = completion.choices[0];
-
-                        if (choice) {
-
-                          text = choice.message?.content ?? '';
-
-                          if (choice.finish_reason === 'length') {
-
-                            text += '\n[...output truncated due to token limit]';
-
-                          }
-
-                        }
-
-          } else {
-
-            throw new Error("Invalid AI client or model configuration.");
-
-          }
-
-      
-
-          if (!text.trim()) {
-
-              return '[AI returned an empty or invalid response]';
-
-          }
-
-      
-
-          return text;
-
-      
-
-        } catch (error) {
-    console.error(`Error generating content with ${selectedModel} API:`, error);
-    throw new Error(`Failed to generate content with ${selectedModel}.`);
-  }
-};
-
-export const suggestTags = async (promptContent: string, selectedModel: SupportedModel): Promise<string[]> => {
-  const systemInstruction = `You are an expert at organizing content. Analyze the user's prompt and suggest relevant tags.
-    - Generate 3 to 5 descriptive tags.
-    - Detect the language of the user's prompt and respond ONLY with tags in that same language.
-    - Respond ONLY with a valid JSON object with a "suggestedTags" key containing an array of strings.`;
-
-  const prompt = `
-    Here is the user's prompt content:
-    "${promptContent}"
-
-    Suggest relevant tags.
-    `;
-
-  try {
-    const jsonText = await generateContent(systemInstruction, prompt, selectedModel, { response_format: { type: "json_object" } });
-    const result = JSON.parse(jsonText.trim());
-
-    if (Array.isArray(result.suggestedTags)) {
-      return result.suggestedTags;
-    } else {
-      throw new Error("Invalid JSON structure in AI response.");
+    if (clientWrapper.kind === 'gemini') {
+      const gm = clientWrapper.client as GeminiClient;
+      const result = await gm.generateContent({
+        contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
+        generationConfig: {
+          responseMimeType: response_format?.type === 'json_object' ? 'application/json' : 'text/plain',
+        },
+      } as any);
+      const text = extractTextFromGemini(result)?.trim() ?? '';
+      if (!text) throw new Error('Empty response from Gemini');
+      cacheSet(cacheKey, text);
+      return text;
     }
-  } catch (error) {
-    console.error(`Error fetching tag suggestions from ${selectedModel} API:`, error);
-    throw new Error(`Failed to get AI tag suggestions from ${selectedModel}.`);
+
+    if (clientWrapper.kind === 'deepseek') {
+      const openai = clientWrapper.client as DeepseekClient;
+      const completion = await openai.chat.completions.create({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: systemInstruction },
+          { role: 'user', content: prompt + maxTokenNote },
+        ],
+        response_format: response_format ?? undefined,
+      } as any);
+      const choice = completion?.choices?.[0];
+      if (!choice) throw new Error('Empty response from Deepseek');
+      const text = (choice.message?.content ?? '').trim();
+      if (!text) throw new Error('Empty content from Deepseek');
+      cacheSet(cacheKey, text);
+      return text;
+    }
+
+    throw new Error('Unsupported client type');
+  };
+
+  return withRetries(callApi, retries);
+}
+
+export async function suggestTags(promptContent: string, selectedModel: SupportedModel): Promise<string[]> {
+  const systemInstruction = `You are an expert at organizing content. Analyze the user's prompt and suggest relevant tags.\n- Generate 3 to 5 descriptive tags.\n- Detect the language of the user's prompt and respond ONLY with tags in that same language.\n- Respond ONLY with a valid JSON object with a \"suggestedTags\" key containing an array of strings.`;
+  const prompt = `Here is the user's prompt content:\n"${promptContent}"\n\nSuggest relevant tags.`;
+
+  const raw = await generateContent(systemInstruction, prompt, selectedModel, { response_format: { type: 'json_object' } });
+  let parsed: any;
+  try {
+    parsed = JSON.parse(raw.trim());
+  } catch {
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
+    else throw new Error(`Invalid JSON: ${raw}`);
   }
-};
+  if (!Array.isArray(parsed.suggestedTags)) throw new Error('Invalid structure');
+  return parsed.suggestedTags.map(String);
+}
 
-export const refinePrompt = async (promptContent: string, selectedModel: SupportedModel, options: { persona?: boolean; task?: boolean; context?: boolean; format?: boolean; max_tokens?: number }): Promise<string> => {
-  let systemInstruction = `You are a world-class prompt engineering expert. Your task is to refine the user-submitted prompt to be more effective for large language models.\nFollow these best practices based on the user's selections:\n`;
+export async function refinePrompt(
+  promptContent: string,
+  selectedModel: SupportedModel,
+  options: { persona?: boolean; task?: boolean; context?: boolean; format?: boolean; max_tokens?: number } = {}
+): Promise<string> {
+  const personaEnabled = options.persona !== false;
+  const taskEnabled = options.task !== false;
+  const contextEnabled = options.context !== false;
+  const formatEnabled = options.format !== false;
 
-  if (options.persona ?? true) {
-    systemInstruction += `**1. Persona:** Assign a highly relevant and authoritative role or persona to the LLM (e.g., 'Act as a senior software engineer specialized in design patterns').\n`;
-  }
-  if (options.task ?? true) {
-    systemInstruction += `**2. Task:** Clarify and decompose the primary task into specific, actionable steps or sub-objectives. Use strong, imperative verbs.\n`;;
-  }
-  if (options.context ?? true) {
-    systemInstruction += `**3. Context:** Explicitly incorporate relevant background information, key constraints, and necessary domain-specific knowledge to reduce ambiguity.\n`;
-  }
-  if (options.format ?? true) {
-    systemInstruction += `**4. Format:** Strictly specify the desired output format, structure, and style (e.g., "Respond in a JSON object," "Use a 5-point bulleted list in a professional tone").\n`;
-  }
+  let systemInstruction = `You are a world-class prompt engineering expert. Your task is to refine the user-submitted prompt to be more effective for large language models.\n`;
 
-  systemInstruction += `\n**Instructions:**
-  - Analyze the user's original prompt and integrate the enabled refinement criteria above.
-  - Generate ONLY the complete, optimized prompt text.
-  - Detect the language of the user-submitted prompt and provide the refined prompt in that same language.
-  - Do NOT include any commentary, explanations, or dialogue before or after the refined prompt.`;
+  if (personaEnabled) systemInstruction += `1) Persona: assign an authoritative role.\n`;
+  if (taskEnabled) systemInstruction += `2) Task: clarify and decompose tasks.\n`;
+  if (contextEnabled) systemInstruction += `3) Context: include background and constraints.\n`;
+  if (formatEnabled) systemInstruction += `4) Format: specify output structure.\n`;
 
-  return generateContent(systemInstruction, promptContent, selectedModel, { max_tokens: options.max_tokens });
-};
+  systemInstruction += `\nInstructions:\n- Output ONLY the refined prompt text in the same language.\n- Do NOT include commentary.`;
 
-export const suggestTitle = async (promptContent: string, selectedModel: SupportedModel): Promise<string> => {
-  const systemInstruction = `You are an expert at summarizing text into concise, descriptive titles. Your task is to generate a short, clear, and relevant title for the given prompt content.
-    - The title should be no more than 10 words.
-    - Detect the language of the given prompt content and respond ONLY with the suggested title text in that same language.
-    - Respond ONLY with the suggested title text. Do not add any extra commentary or markdown formatting.`;
+  const refined = await generateContent(systemInstruction, promptContent, selectedModel, { max_tokens: options.max_tokens });
+  return refined.trim();
+}
 
-  return generateContent(systemInstruction, promptContent, selectedModel);
-};
+export async function suggestTitle(promptContent: string, selectedModel: SupportedModel): Promise<string> {
+  const systemInstruction = `You are an expert at summarizing text into concise, descriptive titles.\n- The title should be no more than 10 words.\n- Detect the language of the given prompt and respond ONLY with the suggested title text.`;
+  const title = await generateContent(systemInstruction, promptContent, selectedModel);
+  return title.trim();
+}
+
+export default { getAiClient, generateContent, suggestTags, refinePrompt, suggestTitle };

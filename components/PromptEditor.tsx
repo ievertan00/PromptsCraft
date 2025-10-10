@@ -112,7 +112,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
                 task: prompt.task ?? true,
                 context: prompt.context ?? true,
                 format: prompt.format ?? true,
-                max_tokens: prompt.max_tokens ?? 5000,
+                max_tokens: prompt.max_tokens ?? 512,
             });
             setRefinedPrompt(result);
         } catch (error) {
@@ -255,7 +255,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
                             </label>
                             <label className="flex items-center gap-1.5 cursor-pointer">
                                 Max Tokens:
-                                <input type="number" value={prompt.max_tokens ?? 5000} onChange={e => setPrompt({...prompt, max_tokens: parseInt(e.target.value, 10)})} className="w-20 bg-theme-default border border-theme-primary-light rounded px-2 py-0.5 focus:ring-theme-primary focus:outline-none" />
+                                <input type="number" value={prompt.max_tokens ?? 512} onChange={e => setPrompt({...prompt, max_tokens: parseInt(e.target.value, 10)})} className="w-20 bg-theme-default border border-theme-primary-light rounded px-2 py-0.5 focus:ring-theme-primary focus:outline-none" />
                             </label>
                         </div>
 

@@ -13,7 +13,9 @@ import {
     moveFolder,
     getPrompt,
     getAllPrompts,
-    updatePromptFavoriteStatus
+    updatePromptFavoriteStatus,
+    moveFolderUp,
+    moveFolderDown
 } from './services/api';
 import type { Folder, Prompt } from './types';
 import { SupportedModel } from './services/aiService';
@@ -188,6 +190,26 @@ const App: React.FC = () => {
         }
     };
 
+    const handleMoveUp = async (folderId: string) => {
+        try {
+            await moveFolderUp(folderId);
+            await fetchAndSetFolders();
+        } catch (error) {
+            console.error("Failed to move folder up:", error);
+            alert("Failed to move folder up. See console for details.");
+        }
+    };
+
+    const handleMoveDown = async (folderId: string) => {
+        try {
+            await moveFolderDown(folderId);
+            await fetchAndSetFolders();
+        } catch (error) {
+            console.error("Failed to move folder down:", error);
+            alert("Failed to move folder down. See console for details.");
+        }
+    };
+
     const handleMovePrompt = async (promptId: string, newFolderId: string) => {
         try {
             const promptToMove = await getPrompt(promptId);
@@ -233,6 +255,8 @@ const App: React.FC = () => {
                         onDeleteFolder={handleDeleteFolder}
                         onMoveFolder={handleMoveFolder}
                         onMovePrompt={handleMovePrompt}
+                        onMoveUp={handleMoveUp}
+                        onMoveDown={handleMoveDown}
                         newFolderParentId={newFolderParentId}
                         onNewFolderRequest={(parentId) => setNewFolderParentId(parentId)}
                         onCancelNewFolder={() => setNewFolderParentId(undefined)}

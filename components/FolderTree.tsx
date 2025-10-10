@@ -5,6 +5,8 @@ import { KebabMenuIcon } from './icons/KebabMenuIcon';
 import { PlusIcon } from './icons/PlusIcon';
 import { EditIcon } from './icons/EditIcon';
 import { DeleteIcon } from './icons/DeleteIcon';
+import { ArrowUpIcon } from './icons/ArrowUpIcon';
+import { ArrowDownIcon } from './icons/ArrowDownIcon';
 import ConfirmModal from './ConfirmModal';
 
 interface FolderTreeProps {
@@ -15,6 +17,8 @@ interface FolderTreeProps {
     onDeleteFolder: (folderId: string) => void;
     onMoveFolder: (folderId: string, newParentId: string | null) => void;
     onMovePrompt: (promptId: string, newFolderId: string) => void;
+    onMoveUp: (folderId: string) => void;
+    onMoveDown: (folderId: string) => void;
     newFolderParentId?: string | null;
     onCreateFolder: (name: string, parentId: string | null) => void;
     onCancelNewFolder: () => void;
@@ -79,12 +83,14 @@ const FolderItem: React.FC<{
     onDeleteFolder: (folderId: string) => void;
     onMoveFolder: (folderId: string, newParentId: string | null) => void;
     onMovePrompt: (promptId: string, newFolderId: string) => void;
+    onMoveUp: (folderId: string) => void;
+    onMoveDown: (folderId: string) => void;
     level: number;
     newFolderParentId?: string | null;
     onCreateFolder: (name: string, parentId: string | null) => void;
     onCancelNewFolder: () => void;
     onNewFolderRequest: (parentId: string | null) => void;
-}> = ({ folder, selectedFolderId, onSelectFolder, onRenameFolder, onDeleteFolder, onMoveFolder, onMovePrompt, level, ...props }) => {
+}> = ({ folder, selectedFolderId, onSelectFolder, onRenameFolder, onDeleteFolder, onMoveFolder, onMovePrompt, onMoveUp, onMoveDown, level, ...props }) => {
     const [isOpen, setIsOpen] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     const [editingName, setEditingName] = useState(folder.name);
@@ -232,6 +238,8 @@ const FolderItem: React.FC<{
                         <div ref={menuRef} className="absolute z-10 right-0 mt-2 w-40 bg-gray-700 border border-gray-600 rounded-md shadow-lg py-1">
                            <a onClick={(e) => { e.stopPropagation(); props.onNewFolderRequest(folder.id); setMenuOpen(false); }} className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-600 cursor-pointer"><PlusIcon className="w-4 h-4 flex-shrink-0" /> New Subfolder</a>
                            <a onClick={(e) => { e.stopPropagation(); setIsEditing(true); setMenuOpen(false); }} className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-600 cursor-pointer"><EditIcon className="w-4 h-4 flex-shrink-0" /> Rename</a>
+                           <a onClick={(e) => { e.stopPropagation(); onMoveUp(folder.id); setMenuOpen(false); }} className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-600 cursor-pointer"><ArrowUpIcon className="w-4 h-4 flex-shrink-0" /> Move Up</a>
+                           <a onClick={(e) => { e.stopPropagation(); onMoveDown(folder.id); setMenuOpen(false); }} className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-600 cursor-pointer"><ArrowDownIcon className="w-4 h-4 flex-shrink-0" /> Move Down</a>
                            <a onClick={(e) => { e.stopPropagation(); setIsConfirmOpen(true); setMenuOpen(false); }} className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-400 hover:bg-gray-600 cursor-pointer"><DeleteIcon className="w-4 h-4 flex-shrink-0" /> Delete</a>
                         </div>
                     )}
@@ -261,6 +269,8 @@ const FolderItem: React.FC<{
                             onDeleteFolder={onDeleteFolder}
                             onMoveFolder={onMoveFolder}
                             onMovePrompt={onMovePrompt}
+                            onMoveUp={onMoveUp}
+                            onMoveDown={onMoveDown}
                             level={level + 1}
                             {...props}
                         />
@@ -287,6 +297,8 @@ const FolderTree: React.FC<FolderTreeProps> = ({ folders, ...rest }) => {
                     key={folder.id}
                     folder={folder}
                     level={0}
+                    onMoveUp={() => {}}
+                    onMoveDown={() => {}}
                     {...rest}
                 />
             ))}

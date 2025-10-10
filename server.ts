@@ -25,7 +25,7 @@ initDB((err) => {
 // Folder API endpoints
 app.get('/api/folders', (req, res) => {
     const db = getDB();
-    db.all("SELECT * FROM folders", [], (err, rows) => {
+    db.all("SELECT * FROM folders ORDER BY sort_order", [], (err, rows) => {
         if (err) {
             res.status(400).json({"error":err.message});
             return;
@@ -37,13 +37,25 @@ app.get('/api/folders', (req, res) => {
 app.post('/api/folders', (req, res) => {
     const db = getDB();
     const { name, parent_id } = req.body;
-    const sql = `INSERT INTO folders (name, parent_id) VALUES (?, ?)`;
-    db.run(sql, [name, parent_id], function(err) {
+    const query = parent_id === null
+        ? "SELECT MAX(sort_order) as max_sort_order FROM folders WHERE parent_id IS NULL"
+        : "SELECT MAX(sort_order) as max_sort_order FROM folders WHERE parent_id = ?";
+    const params = parent_id === null ? [] : [parent_id];
+
+    db.get(query, params, (err, row: any) => {
         if (err) {
             res.status(400).json({"error":err.message});
             return;
         }
-        res.json({ id: this.lastID, name, parent_id });
+        const newSortOrder = (row.max_sort_order || 0) + 1;
+        const sql = `INSERT INTO folders (name, parent_id, sort_order) VALUES (?, ?, ?)`;
+        db.run(sql, [name, parent_id, newSortOrder], function(err) {
+            if (err) {
+                res.status(400).json({"error":err.message});
+                return;
+            }
+            res.json({ id: this.lastID, name, parent_id, sort_order: newSortOrder });
+        });
     });
 });
 
@@ -92,6 +104,77 @@ app.put('/api/folders/:id/move', (req, res) => {
         res.json({ message: 'moved' });
     });
 });
+
+app.put('/api/folders/:id/move-up', (req, res) => {
+    const db = getDB();
+    const folderId = req.params.id;
+    db.get("SELECT * FROM folders WHERE id = ?", [folderId], (err, folder: any) => {
+        if (err) {
+            res.status(400).json({"error":err.message});
+            return;
+        }
+        if (!folder) {
+            res.status(404).json({"error":"Folder not found"});
+            return;
+        }
+        const parentId = folder.parent_id;
+        const currentSortOrder = folder.sort_order;
+        const query = parentId === null 
+            ? "SELECT * FROM folders WHERE parent_id IS NULL AND sort_order < ? ORDER BY sort_order DESC LIMIT 1"
+            : "SELECT * FROM folders WHERE parent_id = ? AND sort_order < ? ORDER BY sort_order DESC LIMIT 1";
+        const params = parentId === null ? [currentSortOrder] : [parentId, currentSortOrder];
+        
+        db.get(query, params, (err, sibling: any) => {
+            if (err) {
+                res.status(400).json({"error":err.message});
+                return;
+            }
+            if (sibling) {
+                db.serialize(() => {
+                    db.run("UPDATE folders SET sort_order = ? WHERE id = ?", [sibling.sort_order, folderId]);
+                    db.run("UPDATE folders SET sort_order = ? WHERE id = ?", [currentSortOrder, sibling.id]);
+                });
+            }
+            res.json({ message: 'moved up' });
+        });
+    });
+});
+
+app.put('/api/folders/:id/move-down', (req, res) => {
+    const db = getDB();
+    const folderId = req.params.id;
+    db.get("SELECT * FROM folders WHERE id = ?", [folderId], (err, folder: any) => {
+        if (err) {
+            res.status(400).json({"error":err.message});
+            return;
+        }
+        if (!folder) {
+            res.status(404).json({"error":"Folder not found"});
+            return;
+        }
+        const parentId = folder.parent_id;
+        const currentSortOrder = folder.sort_order;
+        const query = parentId === null
+            ? "SELECT * FROM folders WHERE parent_id IS NULL AND sort_order > ? ORDER BY sort_order ASC LIMIT 1"
+            : "SELECT * FROM folders WHERE parent_id = ? AND sort_order > ? ORDER BY sort_order ASC LIMIT 1";
+        const params = parentId === null ? [currentSortOrder] : [parentId, currentSortOrder];
+
+        db.get(query, params, (err, sibling: any) => {
+            if (err) {
+                res.status(400).json({"error":err.message});
+                return;
+            }
+            if (sibling) {
+                db.serialize(() => {
+                    db.run("UPDATE folders SET sort_order = ? WHERE id = ?", [sibling.sort_order, folderId]);
+                    db.run("UPDATE folders SET sort_order = ? WHERE id = ?", [currentSortOrder, sibling.id]);
+                });
+            }
+            res.json({ message: 'moved down' });
+        });
+    });
+});
+
 
 app.get('/api/folders/:id/prompts', (req, res) => {
     const db = getDB();
@@ -150,9 +233,9 @@ app.get('/api/prompts/:id', (req, res) => {
 
 app.post('/api/prompts', (req, res) => {
     const db = getDB();
-    const { title, prompt, description, tags, folder_id } = req.body;
-    const sql = `INSERT INTO prompts (title, prompt, description, tags, folder_id) VALUES (?, ?, ?, ?, ?)`;
-    const params = [title, prompt, description, JSON.stringify(tags), folder_id];
+    const { title, prompt, tags, folder_id } = req.body;
+    const sql = `INSERT INTO prompts (title, prompt, tags, folder_id) VALUES (?, ?, ?, ?)`;
+    const params = [title, prompt, JSON.stringify(tags), folder_id];
     db.run(sql, params, function(err) {
         if (err) {
             res.status(400).json({"error":err.message});
@@ -164,9 +247,9 @@ app.post('/api/prompts', (req, res) => {
 
 app.put('/api/prompts/:id', (req, res) => {
     const db = getDB();
-    const { title, prompt, description, tags, folder_id } = req.body;
-    const sql = `UPDATE prompts SET title = ?, prompt = ?, description = ?, tags = ?, folder_id = ? WHERE id = ?`;
-    const params = [title, prompt, description, JSON.stringify(tags), folder_id, req.params.id];
+    const { title, prompt, tags, folder_id } = req.body;
+    const sql = `UPDATE prompts SET title = ?, prompt = ?, tags = ?, folder_id = ? WHERE id = ?`;
+    const params = [title, prompt, JSON.stringify(tags), folder_id, req.params.id];
     db.run(sql, params, function(err) {
         if (err) {
             res.status(400).json({"error":err.message});

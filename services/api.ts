@@ -132,3 +132,15 @@ export const moveFolder = async (folderId: string, newParentId: string | null): 
     });
     return await response.json();
 };
+
+export const moveFolderUp = async (folderId: string): Promise<void> => {
+    await fetch(`${API_URL}/folders/${folderId}/move-up`, {
+        method: 'PUT',
+    });
+};
+
+export const moveFolderDown = async (folderId: string): Promise<void> => {
+    await fetch(`${API_URL}/folders/${folderId}/move-down`, {
+        method: 'PUT',
+    });
+};

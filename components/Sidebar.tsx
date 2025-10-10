@@ -16,6 +16,8 @@ interface SidebarProps {
     onDeleteFolder: (folderId: string) => void;
     onMoveFolder: (folderId: string, newParentId: string | null) => void;
     onMovePrompt: (promptId: string, newFolderId: string) => void;
+    onMoveUp: (folderId: string) => void;
+    onMoveDown: (folderId: string) => void;
     newFolderParentId: string | null | undefined;
     onNewFolderRequest: (parentId: string | null) => void;
     onCancelNewFolder: () => void;
@@ -33,6 +35,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     onDeleteFolder,
     onMoveFolder,
     onMovePrompt,
+    onMoveUp,
+    onMoveDown,
     newFolderParentId,
     onNewFolderRequest,
     onCancelNewFolder,
@@ -110,6 +114,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                             onDeleteFolder={onDeleteFolder}
                             onMoveFolder={onMoveFolder}
                             onMovePrompt={onMovePrompt}
+                            onMoveUp={onMoveUp}
+                            onMoveDown={onMoveDown}
                             newFolderParentId={newFolderParentId}
                             onCreateFolder={onCreateFolder}
                             onCancelNewFolder={onCancelNewFolder}

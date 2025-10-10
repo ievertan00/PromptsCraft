@@ -27,6 +27,7 @@ export const initDB = (callback: (err: Error | null) => void) => {
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT NOT NULL,
                     parent_id INTEGER,
+                    sort_order INTEGER,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (parent_id) REFERENCES folders(id)
@@ -36,7 +37,6 @@ export const initDB = (callback: (err: Error | null) => void) => {
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     title TEXT,
                     prompt TEXT,
-                    description TEXT,
                     tags TEXT,
                     folder_id INTEGER,
                     is_favorite INTEGER DEFAULT 0,
@@ -58,7 +58,37 @@ export const initDB = (callback: (err: Error | null) => void) => {
                         }
                         const hasIsFavoriteColumn = columns.some((col: any) => col.name === 'is_favorite');
 
-                        
+                        // Migration: Add sort_order column to folders if it doesn't exist
+                        db.all("PRAGMA table_info(folders)", (err, columns) => {
+                            if (err) {
+                                console.error("Error checking table info for sort_order column:", err);
+                                callback(err);
+                                return;
+                            }
+                            const hasSortOrderColumn = columns.some((col: any) => col.name === 'sort_order');
+                            if (!hasSortOrderColumn) {
+                                db.run("ALTER TABLE folders ADD COLUMN sort_order INTEGER", (err) => {
+                                    if (err) {
+                                        console.error("Error adding sort_order column:", err);
+                                        callback(err);
+                                    }
+                                });
+                            }
+
+                            // Populate sort_order for existing rows
+                            db.all("SELECT id FROM folders WHERE sort_order IS NULL", [], (err, rows: any[]) => {
+                                if (err) {
+                                    console.error("Error selecting folders to update sort_order:", err);
+                                    callback(err);
+                                    return;
+                                }
+                                db.serialize(() => {
+                                    rows.forEach(row => {
+                                        db.run("UPDATE folders SET sort_order = ? WHERE id = ?", [row.id, row.id]);
+                                    });
+                                });
+                            });
+                        });
                     });
                 });
             });

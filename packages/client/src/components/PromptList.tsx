@@ -20,17 +20,20 @@ interface PromptListProps {
     onToggleFavorite: (promptId: string) => void;
     folders: Folder[];
     onMovePrompt: (promptId: string, newFolderId: string) => void;
+    isDragging: boolean;
+    setIsDragging: (isDragging: boolean) => void;
 }
 
 const PromptCard: React.FC<{
     prompt: Prompt;
     onDoubleClick: () => void;
     onDragStart: (e: React.DragEvent) => void;
+    onDragEnd: () => void;
     onDelete: () => void;
     onToggleFavorite: () => void;
     onMove: (promptId: string, newFolderId: string) => void;
     folders: Folder[];
-}> = ({ prompt, onDoubleClick, onDragStart, onDelete, onToggleFavorite, onMove, folders }) => {
+}> = ({ prompt, onDoubleClick, onDragStart, onDragEnd, onDelete, onToggleFavorite, onMove, folders }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -63,8 +66,15 @@ const PromptCard: React.FC<{
         <div
             onDoubleClick={onDoubleClick}
             draggable="true"
-            onDragStart={onDragStart}
-            className="group bg-theme-secondary border border-theme-default rounded-lg p-4 flex flex-col gap-3 cursor-pointer hover:border-theme-primary-light transition-colors h-full relative"
+            onDragStart={(e) => {
+                onDragStart(e);
+                (e.target as HTMLElement).closest('.prompt-card-container')?.classList.add('dragging');
+            }}
+            onDragEnd={() => {
+                onDragEnd();
+                document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+            }}
+            className="group bg-theme-secondary border border-theme-default rounded-lg p-4 flex flex-col gap-3 cursor-pointer hover:border-theme-primary-light transition-colors h-full relative prompt-card-container"
         >
             <div className="absolute top-2 right-2 flex items-center" ref={menuRef}>
                 <button onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }} className="p-1 rounded-full bg-theme-secondary opacity-0 group-hover:opacity-100 hover:bg-theme-hover focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-theme-primary-light transition-opacity">
@@ -161,12 +171,11 @@ const PromptList: React.FC<PromptListProps> = ({ prompts, selectedFolderName, on
     }, []);
 
     const filteredPrompts = useMemo(() => {
-        if (!searchTerm) return prompts;
-        const lowercasedSearchTerm = searchTerm.toLowerCase();
         return prompts.filter(p => 
-            p.title.toLowerCase().includes(lowercasedSearchTerm) ||
-            p.prompt.toLowerCase().includes(lowercasedSearchTerm) ||
-            p.tags.some(t => t.toLowerCase().includes(lowercasedSearchTerm.startsWith('#') ? lowercasedSearchTerm.substring(1) : lowercasedSearchTerm))
+            !searchTerm ||
+            p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            p.prompt.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            p.tags.some(t => t.toLowerCase().includes(searchTerm.toLowerCase().startsWith('#') ? searchTerm.toLowerCase().substring(1) : searchTerm.toLowerCase()))
         );
     }, [prompts, searchTerm]);
 
@@ -221,7 +230,11 @@ const PromptList: React.FC<PromptListProps> = ({ prompts, selectedFolderName, on
                                             key={prompt.id} 
                                             prompt={prompt} 
                                             onDoubleClick={() => onEditPrompt(prompt)}
-                                            onDragStart={(e) => e.dataTransfer.setData('application/prompt-id', prompt.id)}
+                                            onDragStart={(e) => {
+                                                setIsDragging(true);
+                                                e.dataTransfer.setData('application/prompt-id', prompt.id);
+                                            }}
+                                            onDragEnd={() => setIsDragging(false)}
                                             onDelete={() => onDeletePrompt(prompt.id)}
                                             onToggleFavorite={() => onToggleFavorite(prompt.id)}
                                             onMove={onMovePrompt}

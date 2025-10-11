@@ -23,7 +23,8 @@ interface SidebarProps {
     onCancelNewFolder: () => void;
     onNewPrompt: () => void;
     selectedModel: SupportedModel;
-    onSelectedModelChange: (model: SupportedModel) => void;
+    isDragging: boolean;
+    setIsDragging: (isDragging: boolean) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
@@ -42,7 +43,9 @@ const Sidebar: React.FC<SidebarProps> = ({
     onCancelNewFolder,
     onNewPrompt,
     selectedModel,
-    onSelectedModelChange
+    onSelectedModelChange,
+    isDragging,
+    setIsDragging
 }) => {
 
     const handleDropOnRoot = (e: React.DragEvent) => {
@@ -120,6 +123,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                             onCreateFolder={onCreateFolder}
                             onCancelNewFolder={onCancelNewFolder}
                             onNewFolderRequest={onNewFolderRequest}
+                            isDragging={isDragging}
+                            setIsDragging={setIsDragging}
                         />
                     </div>
                 </div>

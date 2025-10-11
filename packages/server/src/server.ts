@@ -53,6 +53,28 @@ async function main() {
         res.json({ message: 'moved' });
     });
 
+    app.get('/api/folders/:id/prompts', async (req, res) => {
+        try {
+            const folderId = req.params.id;
+            const sql = `
+                WITH RECURSIVE subfolders(id) AS (
+                    SELECT ?
+                    UNION ALL
+                    SELECT f.id FROM folders f JOIN subfolders s ON f.parent_id = s.id
+                )
+                SELECT p.* FROM prompts p JOIN subfolders sf ON p.folder_id = sf.id;
+            `;
+            const prompts = await db.all(sql, folderId);
+            res.json(prompts.map((prompt: any) => ({
+                ...prompt,
+                tags: typeof prompt.tags === 'string' ? JSON.parse(prompt.tags) : prompt.tags,
+                is_favorite: !!prompt.is_favorite,
+            })));
+        } catch (err) {
+            res.status(400).json({"error": (err as Error).message});
+        }
+    });
+
     app.get('/api/prompts', async (req, res) => {
         const { folderId } = req.query;
         let prompts;

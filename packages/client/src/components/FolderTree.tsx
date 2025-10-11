@@ -23,6 +23,8 @@ interface FolderTreeProps {
     onCreateFolder: (name: string, parentId: string | null) => void;
     onCancelNewFolder: () => void;
     onNewFolderRequest: (parentId: string | null) => void;
+    isDragging: boolean;
+    setIsDragging: (isDragging: boolean) => void;
 }
 
 const NewFolderInput: React.FC<{
@@ -91,7 +93,7 @@ const FolderItem: React.FC<{
     onCancelNewFolder: () => void;
     onNewFolderRequest: (parentId: string | null) => void;
 }> = ({ folder, selectedFolderId, onSelectFolder, onRenameFolder, onDeleteFolder, onMoveFolder, onMovePrompt, onMoveUp, onMoveDown, level, ...props }) => {
-    const [isOpen, setIsOpen] = useState(true);
+    const [isOpen, setIsOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editingName, setEditingName] = useState(folder.name);
     const [menuOpen, setMenuOpen] = useState(false);
@@ -151,8 +153,13 @@ const FolderItem: React.FC<{
     };
     
     const handleDragStart = (e: React.DragEvent) => {
+        props.setIsDragging(true);
         e.dataTransfer.setData('application/folder-id', folder.id);
         e.dataTransfer.effectAllowed = 'move';
+    };
+
+    const handleDragEnd = () => {
+        props.setIsDragging(false);
     };
     
     const handleDrop = (e: React.DragEvent) => {
@@ -193,12 +200,13 @@ const FolderItem: React.FC<{
                 onDoubleClick={() => setIsEditing(true)}
                 draggable="true"
                 onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
-                className={`group flex items-center p-2 rounded-md cursor-pointer transition-colors relative ${
+                className={`${props.isDragging ? '' : 'group'} flex items-center p-2 rounded-md cursor-pointer transition-colors relative ${
                     isSelected ? 'bg-indigo-600/30 text-white' : 'hover:bg-gray-800 text-theme-secondary'
-                } ${isDragOver ? 'ring-2 ring-indigo-500 ring-inset' : ''}`}
+                } ${isDragOver ? 'ring-2 ring-indigo-500 ring-inset' : ''}`}}
                 style={{ paddingLeft: `${level * 16 + 8}px` }}
             >
                 {folder.children && folder.children.length > 0 ? (

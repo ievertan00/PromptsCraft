@@ -32,6 +32,8 @@ const App: React.FC = () => {
     const [newFolderParentId, setNewFolderParentId] = useState<string | null | undefined>(undefined);
     const [selectedModel, setSelectedModel] = useState<SupportedModel>('gemini');
 
+    const [isDragging, setIsDragging] = useState(false);
+
     const fetchAndSetFolders = async () => {
         const fetchedFolders = await getFolders();
         setFolders(fetchedFolders);
@@ -263,6 +265,8 @@ const App: React.FC = () => {
                         onNewPrompt={handleNewPrompt}
                         selectedModel={selectedModel}
                         onSelectedModelChange={setSelectedModel}
+                        isDragging={isDragging}
+                        setIsDragging={setIsDragging}
                     />
                 </div>
                 <main className="flex-1 overflow-y-auto">
@@ -275,6 +279,8 @@ const App: React.FC = () => {
                             selectedFolderName={getFolderName(selectedFolderId)}
                             folders={folders}
                             onMovePrompt={handleMovePrompt}
+                            isDragging={isDragging}
+                            setIsDragging={setIsDragging}
                         />
                     </ErrorBoundary>
                 </main>

@@ -169,6 +169,10 @@ const App: React.FC = () => {
     };
 
     const handleDeleteFolder = async (folderId: string) => {
+        if (isDragging) {
+            console.warn("Folder deletion was blocked during a drag operation.");
+            return;
+        }
         try {
             const folderToDelete = folders.find(f => f.id === folderId);
             await deleteFolder(folderId);

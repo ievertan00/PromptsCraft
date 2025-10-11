@@ -206,7 +206,7 @@ const FolderItem: React.FC<{
                 onDragLeave={handleDragLeave}
                 className={`${props.isDragging ? '' : 'group'} flex items-center p-2 rounded-md cursor-pointer transition-colors relative ${
                     isSelected ? 'bg-indigo-600/30 text-white' : 'hover:bg-gray-800 text-theme-secondary'
-                } ${isDragOver ? 'ring-2 ring-indigo-500 ring-inset' : ''}`}}
+                } ${isDragOver ? 'ring-2 ring-indigo-500 ring-inset' : ''}`}
                 style={{ paddingLeft: `${level * 16 + 8}px` }}
             >
                 {folder.children && folder.children.length > 0 ? (

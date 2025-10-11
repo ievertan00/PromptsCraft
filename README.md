@@ -13,7 +13,7 @@ Effortlessly craft professional prompts for any AI model from a single sentence.
 
 ## 📸 Screenshot
 
-![PromptsCraft Screenshot](微信图片_20251011145647_99_702.png)
+![PromptsCraft Screenshot](screen_shot.png)
 *The main interface of PromptsCraft, showing the folder-based organization, quick access tags, and a grid of prompt cards.*
 
 ## 🧠 "Vibe Coding": The Story Behind PromptsCraft

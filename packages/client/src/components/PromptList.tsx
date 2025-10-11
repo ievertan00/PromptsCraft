@@ -74,7 +74,7 @@ const PromptCard: React.FC<{
                 onDragEnd();
                 document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
             }}
-            className="group bg-theme-secondary border border-theme-default rounded-lg p-4 flex flex-col gap-3 cursor-pointer hover:border-theme-primary-light transition-colors h-full relative prompt-card-container"
+            className="group bg-theme-secondary border border-theme-default rounded-lg p-4 flex flex-col gap-3 cursor-pointer hover:border-theme-primary-light transition-colors h-[165px] relative prompt-card-container"
         >
             <div className="absolute top-2 right-2 flex items-center" ref={menuRef}>
                 <button onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }} className="p-1 rounded-full bg-theme-secondary opacity-0 group-hover:opacity-100 hover:bg-theme-hover focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-theme-primary-light transition-opacity">
@@ -126,7 +126,7 @@ const PromptCard: React.FC<{
             </div>
             <h3 className="font-semibold text-theme-default truncate">{prompt.title}</h3>
             <p className="text-sm text-theme-secondary line-clamp-3 overflow-hidden text-ellipsis break-words whitespace-pre-wrap">{prompt.prompt}</p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex gap-2 overflow-x-auto whitespace-nowrap">
                 {prompt.tags.slice(0, 3).map(tag => (
                     <span key={tag} className={`text-xs font-medium px-2 py-0.5 rounded-md ${getTagColorClasses(tag)}`}>{tag}</span>
                 ))}

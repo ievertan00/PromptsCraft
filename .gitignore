@@ -13,7 +13,7 @@
 prompts.db
 
 # Environment variables
-.env
+packages/server/.env
 
 # Logs and local artifacts
 npm-debug.log*

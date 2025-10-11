@@ -1,39 +1,15 @@
 {
-  "name": "promptscraft",
+  "name": "promptscraft-monorepo",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "build:server": "tsc -p tsconfig.server.json",
-    "start:server": "npm run build:server && nodemon dist/server.js",
-    "analyze": "source-map-explorer dist/assets/*.js"
-  },
-  "dependencies": {
-    "@google/genai": "^1.21.0",
-    "@google/generative-ai": "^0.24.1",
-    "@tailwindcss/line-clamp": "^0.4.4",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.3",
-    "@types/sqlite3": "^3.1.11",
-    "autoprefixer": "^10.4.21",
-    "cors": "^2.8.5",
-    "dotenv": "^17.2.3",
-    "express": "^5.1.0",
-    "openai": "^6.0.1",
-    "postcss": "^8.5.6",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-    "sqlite3": "^5.1.7",
-    "tailwindcss": "^3.3.3"
+    "dev": "pnpm --parallel --stream dev",
+    "build": "pnpm --filter \"./packages/**\" build",
+    "start:server": "pnpm --filter server start"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
-    "@vitejs/plugin-react": "^5.0.0",
     "nodemon": "^3.1.10",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "pnpm": "^9.1.0",
+    "typescript": "~5.8.2"
   }
 }

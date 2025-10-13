@@ -11,10 +11,15 @@ Effortlessly craft professional prompts for any AI model from a single sentence.
 -   **✍️ Prompt Refinement:** Enhance your prompts with additional context, persona, and formatting options.
 -   **💡 AI-Suggested Titles:** Generate catchy and descriptive titles for your prompts.
 
-## 📸 Screenshot
+## 📸 Screenshots
 
-![PromptsCraft Screenshot](screen_shot.png)
-*The main interface of PromptsCraft, showing the folder-based organization, quick access tags, and a grid of prompt cards.*
+| Feature | Description |
+| :---: | :--- |
+| ![Main Interface](assets/1.png) | **Main Interface:** A clear and intuitive layout showing the folder-based organization, quick access tags, and a grid of prompt cards for easy management. |
+| ![Prompt Generation](assets/2.png) | **AI-Powered Prompt Generation:** Simply enter a basic idea, and PromptsCraft generates a detailed, professional prompt ready for use. |
+| ![Model Selection](assets/3.png) | **Advanced Refinement:** Fine-tune your prompts by adding persona, context, and other elements to get the perfect output from your AI model. |
+| ![Tagging and Organization](assets/4.png) | **Effortless Organization:** Keep your prompts tidy with folders, favorites, and AI-suggested tags for quick filtering and retrieval. |
+| ![Prompt Refinement](assets/5.png) | **Multi-Model Support:** Choose your target AI model to get an optimized prompt structure tailored to its specific requirements. |
 
 ## 🧠 "Vibe Coding": The Story Behind PromptsCraft
 

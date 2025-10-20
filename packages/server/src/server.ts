@@ -31,8 +31,10 @@ async function main() {
 
     app.post('/api/folders', async (req, res) => {
         const { name, parent_id } = req.body;
-        const result = await db.run('INSERT INTO folders (name, parent_id) VALUES (?, ?)', name, parent_id);
-        res.json({ id: result.lastID, name, parent_id });
+        const maxOrder = await db.get('SELECT MAX(sort_order) as max FROM folders WHERE parent_id = ?', parent_id);
+        const sort_order = (maxOrder.max || 0) + 1;
+        const result = await db.run('INSERT INTO folders (name, parent_id, sort_order) VALUES (?, ?, ?)', name, parent_id, sort_order);
+        res.json({ id: result.lastID, name, parent_id, sort_order });
     });
 
     app.put('/api/folders/:id', async (req, res) => {
@@ -45,6 +47,45 @@ async function main() {
         await db.run('DELETE FROM prompts WHERE folder_id = ?', req.params.id);
         await db.run('DELETE FROM folders WHERE id = ?', req.params.id);
         res.json({ message: 'deleted' });
+    });
+
+    app.put('/api/folders/:id/reorder', async (req, res) => {
+        const { direction } = req.body; // 'up' or 'down'
+        const folderId = Number(req.params.id);
+
+        try {
+            await db.exec('BEGIN TRANSACTION');
+
+            const folder = await db.get('SELECT * FROM folders WHERE id = ?', folderId);
+            if (!folder) {
+                await db.exec('ROLLBACK');
+                return res.status(404).json({ error: 'Folder not found' });
+            }
+
+            let otherFolder;
+            if (direction === 'up') {
+                otherFolder = await db.get(
+                    'SELECT * FROM folders WHERE parent_id = ? AND sort_order < ? ORDER BY sort_order DESC LIMIT 1',
+                    folder.parent_id, folder.sort_order
+                );
+            } else { // down
+                otherFolder = await db.get(
+                    'SELECT * FROM folders WHERE parent_id = ? AND sort_order > ? ORDER BY sort_order ASC LIMIT 1',
+                    folder.parent_id, folder.sort_order
+                );
+            }
+
+            if (otherFolder) {
+                await db.run('UPDATE folders SET sort_order = ? WHERE id = ?', otherFolder.sort_order, folder.id);
+                await db.run('UPDATE folders SET sort_order = ? WHERE id = ?', folder.sort_order, otherFolder.id);
+            }
+
+            await db.exec('COMMIT');
+            res.json({ message: 'reordered' });
+        } catch (error) {
+            await db.exec('ROLLBACK');
+            res.status(500).json({ error: 'Failed to reorder folder' });
+        }
     });
 
     app.put('/api/folders/:id/move', async (req, res) => {

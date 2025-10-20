@@ -4,6 +4,7 @@ export interface Folder {
     name: string;
     parent_id: string | null;
     children?: Folder[];
+    sort_order: number;
 }
 
 export interface Prompt {

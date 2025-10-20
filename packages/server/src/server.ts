@@ -31,7 +31,9 @@ async function main() {
 
     app.post('/api/folders', async (req, res) => {
         const { name, parent_id } = req.body;
-        const maxOrder = await db.get('SELECT MAX(sort_order) as max FROM folders WHERE parent_id = ?', parent_id);
+        const parentIdCheck = parent_id === null ? "IS NULL" : "= ?";
+        const params = parent_id === null ? [] : [parent_id];
+        const maxOrder = await db.get(`SELECT MAX(sort_order) as max FROM folders WHERE parent_id ${parentIdCheck}`, ...params);
         const sort_order = (maxOrder.max || 0) + 1;
         const result = await db.run('INSERT INTO folders (name, parent_id, sort_order) VALUES (?, ?, ?)', name, parent_id, sort_order);
         res.json({ id: result.lastID, name, parent_id, sort_order });
@@ -62,16 +64,19 @@ async function main() {
                 return res.status(404).json({ error: 'Folder not found' });
             }
 
+            const parentIdCheck = folder.parent_id === null ? "IS NULL" : "= ?";
+            const params = folder.parent_id === null ? [folder.sort_order] : [folder.parent_id, folder.sort_order];
+
             let otherFolder;
             if (direction === 'up') {
                 otherFolder = await db.get(
-                    'SELECT * FROM folders WHERE parent_id = ? AND sort_order < ? ORDER BY sort_order DESC LIMIT 1',
-                    folder.parent_id, folder.sort_order
+                    `SELECT * FROM folders WHERE parent_id ${parentIdCheck} AND sort_order < ? ORDER BY sort_order DESC LIMIT 1`,
+                    ...params
                 );
             } else { // down
                 otherFolder = await db.get(
-                    'SELECT * FROM folders WHERE parent_id = ? AND sort_order > ? ORDER BY sort_order ASC LIMIT 1',
-                    folder.parent_id, folder.sort_order
+                    `SELECT * FROM folders WHERE parent_id ${parentIdCheck} AND sort_order > ? ORDER BY sort_order ASC LIMIT 1`,
+                    ...params
                 );
             }
 

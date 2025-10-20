@@ -18,6 +18,11 @@ export const getFolders = async (): Promise<Folder[]> => {
     return buildFolderTree(folders);
 };
 
+export const getTrashFolder = async (): Promise<Folder> => {
+    const response = await fetch(`${API_URL}/trash-folder`);
+    return await response.json();
+};
+
 export const getPromptsByFolderId = async (folderId: string): Promise<Prompt[]> => {
     const response = await fetch(`${API_URL}/folders/${folderId}/prompts`);
     const prompts = await response.json();
@@ -109,6 +114,12 @@ export const deleteFolder = async (folderId: string): Promise<void> => {
 export const deletePrompt = async (promptId: string): Promise<void> => {
     await fetch(`${API_URL}/prompts/${promptId}`, {
         method: 'DELETE',
+    });
+};
+
+export const movePromptToTrash = async (promptId: string): Promise<void> => {
+    await fetch(`${API_URL}/prompts/${promptId}/move-to-trash`, {
+        method: 'PUT',
     });
 };
 

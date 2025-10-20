@@ -4,11 +4,13 @@ import { LogoIcon } from './icons/LogoIcon';
 import FolderTree from './FolderTree';
 import { PlusIcon } from './icons/PlusIcon';
 import { BrainIcon } from './icons/BrainIcon';
+import { DeleteIcon } from './icons/DeleteIcon';
 import ThemeSelector from './ThemeSelector';
 import type { SupportedModel } from '../services/aiService';
 
 interface SidebarProps {
     folders: Folder[];
+    trashFolder: Folder | null;
     selectedFolderId: string | null;
     onSelectFolder: (folderId: string | null) => void;
     onCreateFolder: (name: string, parentId: string | null) => void;
@@ -29,6 +31,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ 
     folders, 
+    trashFolder,
     selectedFolderId, 
     onSelectFolder,
     onCreateFolder,
@@ -128,6 +131,21 @@ const Sidebar: React.FC<SidebarProps> = ({
                         />
                     </div>
                 </div>
+            </div>
+            <div className="p-4 border-b border-theme-default">
+                {trashFolder && (
+                    <button
+                        onClick={() => onSelectFolder(trashFolder.id)}
+                        className={`w-full flex items-center gap-3 p-2 rounded-md text-left text-sm font-medium transition-colors ${
+                            selectedFolderId === trashFolder.id
+                                ? 'bg-theme-primary/30 text-theme-default'
+                                : 'text-theme-secondary hover:bg-theme-tertiary'
+                        }`}
+                    >
+                        <DeleteIcon className="w-5 h-5 shrink-0" />
+                        <span className="truncate">{trashFolder.name}</span>
+                    </button>
+                )}
             </div>
             <div className="p-4 border-t border-theme-default">
                 <div className="flex items-center gap-2 mb-2">

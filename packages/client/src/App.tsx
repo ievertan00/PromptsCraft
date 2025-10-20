@@ -4,12 +4,14 @@ import PromptList from './components/PromptList';
 import PromptEditor from './components/PromptEditor';
 import { 
     getFolders, 
+    getTrashFolder,
     getPromptsByFolderId, 
     savePrompt, 
     createFolder,
     renameFolder,
     deleteFolder,
     deletePrompt,
+    movePromptToTrash,
     moveFolder,
     getPrompt,
     getAllPrompts,
@@ -25,6 +27,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 
 const App: React.FC = () => {
     const [folders, setFolders] = useState<Folder[]>([]);
+    const [trashFolder, setTrashFolder] = useState<Folder | null>(null);
     const [prompts, setPrompts] = useState<Prompt[]>([]);
     const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
     const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null);
@@ -48,6 +51,11 @@ const App: React.FC = () => {
     // Fetch folders once on mount
     useEffect(() => {
         fetchAndSetFolders();
+        const fetchTrash = async () => {
+            const trash = await getTrashFolder();
+            setTrashFolder(trash);
+        };
+        fetchTrash();
     }, []);
 
     // Fetch prompts whenever the selected folder changes
@@ -126,6 +134,36 @@ const App: React.FC = () => {
         } catch (error) {
             console.error("Failed to delete prompt:", error);
             alert("Failed to delete prompt. See console for details.");
+        }
+    };
+
+    const handleMoveToTrash = async (promptId: string) => {
+        try {
+            await movePromptToTrash(promptId);
+            if (selectedFolderId) {
+                fetchAndSetPrompts(selectedFolderId);
+            } else {
+                const allPrompts = await getAllPrompts();
+                setPrompts(allPrompts);
+            }
+        } catch (error) {
+            console.error("Failed to move prompt to trash:", error);
+            alert("Failed to move prompt to trash. See console for details.");
+        }
+    };
+
+    const handleDeletePermanently = async (promptId: string) => {
+        try {
+            await deletePrompt(promptId);
+            if (selectedFolderId) {
+                fetchAndSetPrompts(selectedFolderId);
+            } else {
+                const allPrompts = await getAllPrompts();
+                setPrompts(allPrompts);
+            }
+        } catch (error) {
+            console.error("Failed to delete prompt permanently:", error);
+            alert("Failed to delete prompt permanently. See console for details.");
         }
     };
 
@@ -254,6 +292,7 @@ const App: React.FC = () => {
                 <div className="w-96 flex-shrink-0">
                     <Sidebar
                         folders={folders}
+                        trashFolder={trashFolder}
                         selectedFolderId={selectedFolderId}
                         onSelectFolder={handleSelectFolder}
                         onCreateFolder={handleCreateFolder}
@@ -278,7 +317,8 @@ const App: React.FC = () => {
                         <PromptList
                             prompts={prompts}
                             onEditPrompt={handleEditPrompt}
-                            onDeletePrompt={handleDeletePrompt}
+                            onMoveToTrash={handleMoveToTrash}
+                            onDeletePermanently={handleDeletePermanently}
                             onToggleFavorite={handleToggleFavorite}
                             selectedFolderName={getFolderName(selectedFolderId)}
                             folders={folders}

@@ -13,16 +13,44 @@ async function main() {
         driver: sqlite3.Database
     });
     console.log('Database initialized successfully.');
+    // Migration logic
+    const migrate = async () => {
+        const folderInfo = await db.all("PRAGMA table_info(folders)");
+        const folderColumns = folderInfo.map(c => c.name);
+        if (!folderColumns.includes('is_system')) {
+            await db.exec('ALTER TABLE folders ADD COLUMN is_system INTEGER DEFAULT 0');
+        }
+        const promptInfo = await db.all("PRAGMA table_info(prompts)");
+        const promptColumns = promptInfo.map(c => c.name);
+        if (!promptColumns.includes('deleted_at')) {
+            await db.exec('ALTER TABLE prompts ADD COLUMN deleted_at DATETIME');
+        }
+    };
+    await migrate();
     await db.exec(`CREATE TABLE IF NOT EXISTS folders (id INTEGER PRIMARY KEY, name TEXT, parent_id INTEGER, sort_order INTEGER)`);
     await db.exec(`CREATE TABLE IF NOT EXISTS prompts (id INTEGER PRIMARY KEY, title TEXT, prompt TEXT, tags TEXT, folder_id INTEGER, is_favorite INTEGER)`);
+    const trashFolder = await db.get('SELECT * FROM folders WHERE is_system = 1 AND name = ?', 'Trash');
+    if (!trashFolder) {
+        await db.run('INSERT INTO folders (name, is_system, sort_order) VALUES (?, 1, 9999)', 'Trash');
+    }
     app.use(cors());
     app.use(express.json());
     app.get('/api/folders', async (req, res) => {
-        const folders = await db.all('SELECT * FROM folders ORDER BY sort_order');
+        const folders = await db.all('SELECT * FROM folders WHERE is_system = 0 ORDER BY sort_order');
         res.json(folders);
+    });
+    app.get('/api/trash-folder', async (req, res) => {
+        const trashFolder = await db.get('SELECT * FROM folders WHERE is_system = 1 AND name = ?', 'Trash');
+        res.json(trashFolder);
     });
     app.post('/api/folders', async (req, res) => {
         const { name, parent_id } = req.body;
+        if (parent_id) {
+            const parentFolder = await db.get('SELECT * FROM folders WHERE id = ?', parent_id);
+            if (parentFolder && parentFolder.is_system) {
+                return res.status(403).json({ error: 'Cannot create subfolders in a system folder.' });
+            }
+        }
         const parentIdCheck = parent_id === null ? "IS NULL" : "= ?";
         const params = parent_id === null ? [] : [parent_id];
         const maxOrder = await db.get(`SELECT MAX(sort_order) as max FROM folders WHERE parent_id ${parentIdCheck}`, ...params);
@@ -31,12 +59,20 @@ async function main() {
         res.json({ id: result.lastID, name, parent_id, sort_order });
     });
     app.put('/api/folders/:id', async (req, res) => {
+        const folder = await db.get('SELECT * FROM folders WHERE id = ?', req.params.id);
+        if (folder && folder.is_system) {
+            return res.status(403).json({ error: 'System folders cannot be modified.' });
+        }
         const { name } = req.body;
         await db.run('UPDATE folders SET name = ? WHERE id = ?', name, req.params.id);
         res.json({ id: req.params.id, name });
     });
     app.delete('/api/folders/:id', async (req, res) => {
-        await db.run('DELETE FROM prompts WHERE folder_id = ?', req.params.id);
+        const trashFolder = await db.get('SELECT id FROM folders WHERE is_system = 1 AND name = ?', 'Trash');
+        if (!trashFolder) {
+            return res.status(500).json({ error: 'Trash folder not found' });
+        }
+        await db.run('UPDATE prompts SET folder_id = ? WHERE folder_id = ?', trashFolder.id, req.params.id);
         await db.run('DELETE FROM folders WHERE id = ?', req.params.id);
         res.json({ message: 'deleted' });
     });
@@ -72,8 +108,12 @@ async function main() {
         }
     });
     app.put('/api/folders/:id/move', async (req, res) => {
-        const { parent_id } = req.body;
         const folderId = Number(req.params.id);
+        const folder = await db.get('SELECT * FROM folders WHERE id = ?', folderId);
+        if (folder && folder.is_system) {
+            return res.status(403).json({ error: 'System folders cannot be moved.' });
+        }
+        const { parent_id } = req.body;
         if (folderId === Number(parent_id)) {
             return res.status(400).json({ error: "A folder cannot be moved into itself." });
         }
@@ -146,6 +186,14 @@ async function main() {
         const { is_favorite } = req.body;
         await db.run('UPDATE prompts SET is_favorite = ? WHERE id = ?', is_favorite, req.params.id);
         res.json({ message: 'updated' });
+    });
+    app.put('/api/prompts/:id/move-to-trash', async (req, res) => {
+        const trashFolder = await db.get('SELECT id FROM folders WHERE is_system = 1 AND name = ?', 'Trash');
+        if (!trashFolder) {
+            return res.status(500).json({ error: 'Trash folder not found' });
+        }
+        await db.run('UPDATE prompts SET folder_id = ? WHERE id = ?', trashFolder.id, req.params.id);
+        res.json({ message: 'moved to trash' });
     });
     app.delete('/api/prompts/:id', async (req, res) => {
         const result = await db.run('DELETE FROM prompts WHERE id = ?', req.params.id);

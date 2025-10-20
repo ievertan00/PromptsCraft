@@ -10,13 +10,14 @@ import { StarIcon } from './icons/StarIcon';
 import { StarFilledIcon } from './icons/StarFilledIcon';
 import { BriefcaseIcon } from './icons/BriefcaseIcon';
 import FolderSelectModal from './FolderSelectModal';
-import ConfirmModal from './ConfirmModal';
+import DeletePromptConfirmModal from './DeletePromptConfirmModal';
 
 interface PromptListProps {
     prompts: Prompt[];
     selectedFolderName: string;
     onEditPrompt: (prompt: Prompt) => void;
-    onDeletePrompt: (promptId: string) => void;
+    onMoveToTrash: (promptId: string) => void;
+    onDeletePermanently: (promptId: string) => void;
     onToggleFavorite: (promptId: string) => void;
     folders: Folder[];
     onMovePrompt: (promptId: string, newFolderId: string) => void;
@@ -29,11 +30,12 @@ const PromptCard: React.FC<{
     onDoubleClick: () => void;
     onDragStart: (e: React.DragEvent) => void;
     onDragEnd: () => void;
-    onDelete: () => void;
+    onMoveToTrash: () => void;
+    onDeletePermanently: () => void;
     onToggleFavorite: () => void;
     onMove: (promptId: string, newFolderId: string) => void;
     folders: Folder[];
-}> = ({ prompt, onDoubleClick, onDragStart, onDragEnd, onDelete, onToggleFavorite, onMove, folders }) => {
+}> = ({ prompt, onDoubleClick, onDragStart, onDragEnd, onMoveToTrash, onDeletePermanently, onToggleFavorite, onMove, folders }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -139,22 +141,25 @@ const PromptCard: React.FC<{
                     currentFolderId={prompt.folder_id}
                 />
             )}
-            <ConfirmModal
+            <DeletePromptConfirmModal
                 isOpen={isConfirmOpen}
                 onClose={() => setIsConfirmOpen(false)}
-                onConfirm={() => {
-                    onDelete();
+                onMoveToTrash={() => {
+                    onMoveToTrash();
+                    setIsConfirmOpen(false);
+                }}
+                onDeleteAnyway={() => {
+                    onDeletePermanently();
                     setIsConfirmOpen(false);
                 }}
                 title="Delete Prompt"
-                message={`Are you sure you want to delete the prompt "${prompt.title}"? This action cannot be undone.`}
-                confirmText="Delete"
+                message={`Are you sure you want to delete the prompt "${prompt.title}"?`}
             />
         </div>
     );
 };
 
-const PromptList: React.FC<PromptListProps> = ({ prompts, selectedFolderName, onEditPrompt, onDeletePrompt, onToggleFavorite, folders, onMovePrompt }) => {
+const PromptList: React.FC<PromptListProps> = ({ prompts, selectedFolderName, onEditPrompt, onMoveToTrash, onDeletePermanently, onToggleFavorite, folders, onMovePrompt, isDragging, setIsDragging }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [topTags, setTopTags] = useState<string[]>([]);
 
@@ -235,7 +240,8 @@ const PromptList: React.FC<PromptListProps> = ({ prompts, selectedFolderName, on
                                                 e.dataTransfer.setData('application/prompt-id', prompt.id);
                                             }}
                                             onDragEnd={() => setIsDragging(false)}
-                                            onDelete={() => onDeletePrompt(prompt.id)}
+                                            onMoveToTrash={() => onMoveToTrash(prompt.id)}
+                                            onDeletePermanently={() => onDeletePermanently(prompt.id)}
                                             onToggleFavorite={() => onToggleFavorite(prompt.id)}
                                             onMove={onMovePrompt}
                                             folders={folders}
@@ -258,7 +264,8 @@ const PromptList: React.FC<PromptListProps> = ({ prompts, selectedFolderName, on
                                 prompt={prompt} 
                                 onDoubleClick={() => onEditPrompt(prompt)}
                                 onDragStart={(e) => e.dataTransfer.setData('application/prompt-id', prompt.id)}
-                                onDelete={() => onDeletePrompt(prompt.id)}
+                                onMoveToTrash={() => onMoveToTrash(prompt.id)}
+                                onDeletePermanently={() => onDeletePermanently(prompt.id)}
                                 onToggleFavorite={() => onToggleFavorite(prompt.id)}
                                 onMove={onMovePrompt}
                                 folders={folders}

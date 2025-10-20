@@ -49,7 +49,30 @@ async function main() {
 
     app.put('/api/folders/:id/move', async (req, res) => {
         const { parent_id } = req.body;
-        await db.run('UPDATE folders SET parent_id = ? WHERE id = ?', parent_id, req.params.id);
+        const folderId = Number(req.params.id);
+
+        if (folderId === Number(parent_id)) {
+            return res.status(400).json({ error: "A folder cannot be moved into itself." });
+        }
+
+        if (parent_id !== null) {
+            const sql = `
+                WITH RECURSIVE subfolders(id) AS (
+                    SELECT ?
+                    UNION ALL
+                    SELECT f.id FROM folders f JOIN subfolders s ON f.parent_id = s.id
+                )
+                SELECT id FROM subfolders;
+            `;
+            const descendants = await db.all(sql, folderId);
+            const descendantIds = descendants.map(d => d.id);
+
+            if (descendantIds.includes(Number(parent_id))) {
+                return res.status(400).json({ error: "A folder cannot be moved into its own subfolder." });
+            }
+        }
+
+        await db.run('UPDATE folders SET parent_id = ? WHERE id = ?', parent_id, folderId);
         res.json({ message: 'moved' });
     });
 

@@ -40,7 +40,17 @@ const DeletePromptConfirmModal: React.FC<DeletePromptConfirmModalProps> = ({
           </div>
         </div>
         
-        <div className="flex flex-col sm:flex-row-reverse gap-3">
+        <div className="flex flex-col gap-3">
+          <button 
+            onClick={onMoveToTrash} 
+            className="px-5 py-2.5 rounded-lg bg-theme-primary hover:bg-theme-primary-light text-white font-medium transition-colors flex items-center justify-center gap-2"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 010 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+            </svg>
+            Move to Trash
+          </button>
+          
           <button 
             onClick={onDeleteAnyway} 
             className="px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium transition-colors flex items-center justify-center gap-2"
@@ -49,16 +59,6 @@ const DeletePromptConfirmModal: React.FC<DeletePromptConfirmModalProps> = ({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
             Delete Permanently
-          </button>
-          
-          <button 
-            onClick={onMoveToTrash} 
-            className="px-5 py-2.5 rounded-lg bg-theme-primary hover:bg-theme-primary-light text-white font-medium transition-colors flex items-center justify-center gap-2"
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-            </svg>
-            Move to Trash
           </button>
           
           <button 

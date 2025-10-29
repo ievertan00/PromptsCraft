@@ -1,0 +1,7 @@
+services:
+- type: web
+  name: promptscraft-server
+  env: docker
+  region: oregon
+  plan: free
+  healthCheckPath: /

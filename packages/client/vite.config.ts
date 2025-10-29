@@ -10,6 +10,17 @@ export default defineConfig(({ mode }) => {
         port: 3000,
         host: '0.0.0.0',
       },
+      build: {
+        outDir: 'dist',
+        sourcemap: true,
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              vendor: ['react', 'react-dom'],
+            },
+          },
+        },
+      },
       plugins: [react()],
       resolve: {
         alias: {

@@ -18,3 +18,5 @@ packages/server/.env
 # Logs and local artifacts
 npm-debug.log*
 yarn-debug.log*
+.ignore
+.genkit

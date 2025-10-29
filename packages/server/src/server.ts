@@ -1,14 +1,14 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { Pool } from 'pg';
+import { Pool, QueryResult } from 'pg';
 import { suggestTags, refinePrompt, suggestTitle } from './services/serverAiService.js';
 
 dotenv.config();
 
 async function main() {
     const app = express();
-    const port = 3001;
+    const port = parseInt(process.env.PORT || '3001');
 
     const pool = new Pool({
         connectionString: process.env.DATABASE_URL,
@@ -44,9 +44,9 @@ async function main() {
 
     await migrate();
 
-    const trashFolderRes = await pool.query('SELECT * FROM folders WHERE is_system = 1 AND name = ', ['Trash']);
+    const trashFolderRes: QueryResult = await pool.query('SELECT * FROM folders WHERE is_system = 1 AND name = $1', ['Trash']);
     if (trashFolderRes.rowCount === 0) {
-        await pool.query('INSERT INTO folders (name, is_system, sort_order) VALUES (, 1, 9999)', ['Trash']);
+        await pool.query('INSERT INTO folders (name, is_system, sort_order) VALUES ($1, $2, $3)', ['Trash', 1, 9999]);
     }
 
     app.use(cors());
@@ -58,7 +58,7 @@ async function main() {
     });
 
     app.get('/api/trash-folder', async (req, res) => {
-        const { rows } = await pool.query('SELECT * FROM folders WHERE is_system = 1 AND name = ', ['Trash']);
+        const { rows } = await pool.query('SELECT * FROM folders WHERE is_system = 1 AND name = $1', ['Trash']);
         res.json(rows[0]);
     });
 
@@ -66,37 +66,40 @@ async function main() {
         const { name, parent_id } = req.body;
 
         if (parent_id) {
-            const parentFolderRes = await pool.query('SELECT * FROM folders WHERE id = ', [parent_id]);
-            if (parentFolderRes && parentFolderRes.rowCount > 0 && parentFolderRes.rows[0].is_system) {
+            const parentFolderRes: QueryResult = await pool.query('SELECT * FROM folders WHERE id = $1', [parent_id]);
+            if (parentFolderRes.rowCount !== null && parentFolderRes.rowCount > 0 && parentFolderRes.rows[0].is_system) {
                 return res.status(403).json({ error: 'Cannot create subfolders in a system folder.' });
             }
         }
 
-        const parentIdCheck = parent_id === null ? "IS NULL" : "= ";
-        const params = parent_id === null ? [] : [parent_id];
-        const maxOrderRes = await pool.query(`SELECT MAX(sort_order) as max FROM folders WHERE parent_id ${parentIdCheck}`, params);
+        let maxOrderRes;
+        if (parent_id === null) {
+            maxOrderRes = await pool.query('SELECT MAX(sort_order) as max FROM folders WHERE parent_id IS NULL');
+        } else {
+            maxOrderRes = await pool.query('SELECT MAX(sort_order) as max FROM folders WHERE parent_id = $1', [parent_id]);
+        }
         const sort_order = (maxOrderRes.rows[0].max || 0) + 1;
-        const result = await pool.query('INSERT INTO folders (name, parent_id, sort_order) VALUES (, $2, $3) RETURNING id', [name, parent_id, sort_order]);
+        const result = await pool.query('INSERT INTO folders (name, parent_id, sort_order) VALUES ($1, $2, $3) RETURNING id', [name, parent_id, sort_order]);
         res.json({ id: result.rows[0].id, name, parent_id, sort_order });
     });
 
     app.put('/api/folders/:id', async (req, res) => {
-        const folderRes = await pool.query('SELECT * FROM folders WHERE id = ', [req.params.id]);
-        if (folderRes && folderRes.rowCount > 0 && folderRes.rows[0].is_system) {
+        const folderRes: QueryResult = await pool.query('SELECT * FROM folders WHERE id = $1', [req.params.id]);
+        if (folderRes.rowCount !== null && folderRes.rowCount > 0 && folderRes.rows[0].is_system) {
             return res.status(403).json({ error: 'System folders cannot be modified.' });
         }
         const { name } = req.body;
-        await pool.query('UPDATE folders SET name =  WHERE id = $2', [name, req.params.id]);
+        await pool.query('UPDATE folders SET name = $1 WHERE id = $2', [name, req.params.id]);
         res.json({ id: req.params.id, name });
     });
 
     app.delete('/api/folders/:id', async (req, res) => {
-        const trashFolderRes = await pool.query('SELECT id FROM folders WHERE is_system = 1 AND name = ', ['Trash']);
-        if (trashFolderRes.rowCount === 0) {
+        const trashFolderRes: QueryResult = await pool.query('SELECT id FROM folders WHERE is_system = 1 AND name = $1', ['Trash']);
+        if (trashFolderRes.rowCount !== null && trashFolderRes.rowCount === 0) {
             return res.status(500).json({ error: 'Trash folder not found' });
         }
-        await pool.query('UPDATE prompts SET folder_id =  WHERE folder_id = $2', [trashFolderRes.rows[0].id, req.params.id]);
-        await pool.query('DELETE FROM folders WHERE id = ', [req.params.id]);
+        await pool.query('UPDATE prompts SET folder_id = $1 WHERE folder_id = $2', [trashFolderRes.rows[0].id, req.params.id]);
+        await pool.query('DELETE FROM folders WHERE id = $1', [req.params.id]);
         res.json({ message: 'deleted' });
     });
 
@@ -107,30 +110,47 @@ async function main() {
         try {
             await pool.query('BEGIN');
 
-            const folderRes = await pool.query('SELECT * FROM folders WHERE id = ', [folderId]);
+            const folderRes: QueryResult = await pool.query('SELECT * FROM folders WHERE id = $1', [folderId]);
             if (folderRes.rowCount === 0) {
                 await pool.query('ROLLBACK');
                 return res.status(404).json({ error: 'Folder not found' });
             }
             const folder = folderRes.rows[0];
 
-            const parentIdCheck = folder.parent_id === null ? "IS NULL" : "= ";
-            const params = folder.parent_id === null ? [folder.sort_order] : [folder.parent_id, folder.sort_order];
-
-            let otherFolderRes;
-            if (direction === 'up') {
-                otherFolderRes = await pool.query(
-                    `SELECT * FROM folders WHERE parent_id ${parentIdCheck} AND sort_order < ${params.length + 1} ORDER BY sort_order DESC LIMIT 1`,
-                    params
-                );
-            } else { // down
-                otherFolderRes = await pool.query(
-                    `SELECT * FROM folders WHERE parent_id ${parentIdCheck} AND sort_order > ${params.length + 1} ORDER BY sort_order ASC LIMIT 1`,
-                    params
-                );
+            let otherFolderRes: QueryResult;
+            if (folder.parent_id === null) {
+                if (direction === 'up') {
+                    otherFolderRes = await pool.query(
+                        'SELECT * FROM folders WHERE parent_id IS NULL AND sort_order < $1 ORDER BY sort_order DESC LIMIT 1',
+                        [folder.sort_order]
+                    );
+                } else { // down
+                    otherFolderRes = await pool.query(
+                        'SELECT * FROM folders WHERE parent_id IS NULL AND sort_order > $1 ORDER BY sort_order ASC LIMIT 1',
+                        [folder.sort_order]
+                    );
+                }
+            } else {
+                if (direction === 'up') {
+                    otherFolderRes = await pool.query(
+                        'SELECT * FROM folders WHERE parent_id = $1 AND sort_order < $2 ORDER BY sort_order DESC LIMIT 1',
+                        [folder.parent_id, folder.sort_order]
+                    );
+                } else { // down
+                    otherFolderRes = await pool.query(
+                        'SELECT * FROM folders WHERE parent_id = $1 AND sort_order > $2 ORDER BY sort_order ASC LIMIT 1',
+                        [folder.parent_id, folder.sort_order]
+                    );
+                }
+            }
+            
+            if (otherFolderRes.rowCount !== null && otherFolderRes.rowCount > 0) {
+                const otherFolder = otherFolderRes.rows[0];
+                await pool.query('UPDATE folders SET sort_order = $1 WHERE id = $2', [otherFolder.sort_order, folder.id]);
+                await pool.query('UPDATE folders SET sort_order = $1 WHERE id = $2', [folder.sort_order, otherFolder.id]);
             }
 
-            if (otherFolderRes && otherFolderRes.rowCount > 0) {
+            if (otherFolderRes && otherFolderRes.rowCount !== null && otherFolderRes.rowCount > 0) {
                 const otherFolder = otherFolderRes.rows[0];
                 await pool.query('UPDATE folders SET sort_order = $1 WHERE id = $2', [otherFolder.sort_order, folder.id]);
                 await pool.query('UPDATE folders SET sort_order = $1 WHERE id = $2', [folder.sort_order, otherFolder.id]);
@@ -146,8 +166,8 @@ async function main() {
 
     app.put('/api/folders/:id/move', async (req, res) => {
         const folderId = Number(req.params.id);
-        const folderRes = await pool.query('SELECT * FROM folders WHERE id = $1', [folderId]);
-        if (folderRes && folderRes.rowCount > 0 && folderRes.rows[0].is_system) {
+        const folderRes: QueryResult = await pool.query('SELECT * FROM folders WHERE id = $1', [folderId]);
+        if (folderRes.rowCount !== null && folderRes.rowCount > 0 && folderRes.rows[0].is_system) {
             return res.status(403).json({ error: 'System folders cannot be moved.' });
         }
 
@@ -174,7 +194,7 @@ async function main() {
             }
         }
 
-        await pool.query('UPDATE folders SET parent_id =  WHERE id = $2', [parent_id, folderId]);
+        await pool.query('UPDATE folders SET parent_id = $1 WHERE id = $2', [parent_id, folderId]);
         res.json({ message: 'moved' });
     });
 
@@ -183,7 +203,7 @@ async function main() {
             const folderId = req.params.id;
             const sql = `
                 WITH RECURSIVE subfolders(id) AS (
-                    SELECT ::integer AS id
+                    SELECT $1::integer AS id
                     UNION ALL
                     SELECT f.id FROM folders f JOIN subfolders s ON f.parent_id = s.id
                 )
@@ -204,7 +224,7 @@ async function main() {
         const { folderId } = req.query;
         let promptsRes;
         if (folderId) {
-            promptsRes = await pool.query('SELECT * FROM prompts WHERE folder_id = ', [folderId]);
+            promptsRes = await pool.query('SELECT * FROM prompts WHERE folder_id = $1', [folderId]);
         } else {
             promptsRes = await pool.query('SELECT * FROM prompts');
         }
@@ -212,39 +232,39 @@ async function main() {
     });
 
     app.get('/api/prompts/:id', async (req, res) => {
-        const { rows } = await pool.query('SELECT * FROM prompts WHERE id = ', [req.params.id]);
+        const { rows } = await pool.query('SELECT * FROM prompts WHERE id = $1', [req.params.id]);
         res.json(rows[0]);
     });
 
     app.post('/api/prompts', async (req, res) => {
         const { title, prompt, tags, folder_id } = req.body;
-        const result = await pool.query('INSERT INTO prompts (title, prompt, tags, folder_id) VALUES (, $2, $3, $4) RETURNING id', [title, prompt, JSON.stringify(tags), folder_id]);
+        const result = await pool.query('INSERT INTO prompts (title, prompt, tags, folder_id) VALUES ($1, $2, $3, $4) RETURNING id', [title, prompt, JSON.stringify(tags), folder_id]);
         res.json({ id: result.rows[0].id, ...req.body });
     });
 
     app.put('/api/prompts/:id', async (req, res) => {
         const { title, prompt, tags, folder_id } = req.body;
-        await pool.query('UPDATE prompts SET title = , prompt = $2, tags = $3, folder_id = $4 WHERE id = $5', [title, prompt, JSON.stringify(tags), folder_id, req.params.id]);
+        await pool.query('UPDATE prompts SET title = $1, prompt = $2, tags = $3, folder_id = $4 WHERE id = $5', [title, prompt, JSON.stringify(tags), folder_id, req.params.id]);
         res.json({ message: 'updated' });
     });
 
     app.put('/api/prompts/:id/favorite', async (req, res) => {
         const { is_favorite } = req.body;
-        await pool.query('UPDATE prompts SET is_favorite =  WHERE id = $2', [is_favorite, req.params.id]);
+        await pool.query('UPDATE prompts SET is_favorite = $1 WHERE id = $2', [is_favorite, req.params.id]);
         res.json({ message: 'updated' });
     });
 
     app.put('/api/prompts/:id/move-to-trash', async (req, res) => {
-        const trashFolderRes = await pool.query('SELECT id FROM folders WHERE is_system = 1 AND name = ', ['Trash']);
+        const trashFolderRes: QueryResult = await pool.query('SELECT id FROM folders WHERE is_system = 1 AND name = $1', ['Trash']);
         if (trashFolderRes.rowCount === 0) {
             return res.status(500).json({ error: 'Trash folder not found' });
         }
-        await pool.query('UPDATE prompts SET folder_id =  WHERE id = $2', [trashFolderRes.rows[0].id, req.params.id]);
+        await pool.query('UPDATE prompts SET folder_id = $1 WHERE id = $2', [trashFolderRes.rows[0].id, req.params.id]);
         res.json({ message: 'moved to trash' });
     });
 
     app.delete('/api/prompts/:id', async (req, res) => {
-        const result = await pool.query('DELETE FROM prompts WHERE id = ', [req.params.id]);
+        const result = await pool.query('DELETE FROM prompts WHERE id = $1', [req.params.id]);
         if (result.rowCount === 0) {
             return res.status(404).json({ error: 'Prompt not found' });
         }
@@ -296,6 +316,11 @@ async function main() {
         } catch (error) {
             res.status(500).json({ error: 'Failed to suggest title.', details: (error as Error).message });
         }
+    });
+
+    // Health check endpoint for Render
+    app.get('/', (req, res) => {
+        res.json({ status: 'OK', message: 'PromptsCraft server is running' });
     });
 
     app.listen(port, () => {

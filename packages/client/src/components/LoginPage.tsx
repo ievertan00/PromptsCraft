@@ -63,19 +63,26 @@ const LoginPage: React.FC = () => {
               required
             />
           </div>
-          <button
-            type="submit"
-            className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 transition duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            Sign In
-          </button>
+          <div className="flex gap-3">
+            <button
+              type="submit"
+              className="flex-1 bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 transition duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-300 transition duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+              onClick={(e) => {
+                e.preventDefault();
+                // Placeholder functionality - no actual sign up endpoint
+                alert('Sign-up is currently disabled');
+              }}
+            >
+              Sign Up
+            </button>
+          </div>
         </form>
-        <div className="text-center text-sm text-gray-600 mt-4">
-          <p>Default account: evertan / 1234abcd</p>
-        </div>
-        <div className="text-center text-sm text-gray-500 mt-6">
-          <p>Sign-up is currently disabled</p>
-        </div>
       </div>
     </div>
   );

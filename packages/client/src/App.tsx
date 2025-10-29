@@ -28,7 +28,7 @@ import LoginPage from './components/LoginPage';
 import { useAuth } from './contexts/AuthContext';
 
 const App: React.FC = () => {
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, logout } = useAuth();
     const [folders, setFolders] = useState<Folder[]>([]);
     const [trashFolder, setTrashFolder] = useState<Folder | null>(null);
     const [prompts, setPrompts] = useState<Prompt[]>([]);
@@ -297,58 +297,68 @@ const App: React.FC = () => {
 
     return (
         <ThemeProvider>
-            <div className="flex h-screen font-sans bg-theme-default text-theme-default">
-                <div className="w-96 flex-shrink-0">
-                    <Sidebar
-                        folders={folders}
-                        trashFolder={trashFolder}
-                        selectedFolderId={selectedFolderId}
-                        onSelectFolder={handleSelectFolder}
-                        onCreateFolder={handleCreateFolder}
-                        onRenameFolder={handleRenameFolder}
-                        onDeleteFolder={handleDeleteFolder}
-                        onMoveFolder={handleMoveFolder}
-                        onMovePrompt={handleMovePrompt}
-                        onMoveUp={handleMoveUp}
-                        onMoveDown={handleMoveDown}
-                        newFolderParentId={newFolderParentId}
-                        onNewFolderRequest={(parentId) => setNewFolderParentId(parentId)}
-                        onCancelNewFolder={() => setNewFolderParentId(undefined)}
-                        onNewPrompt={handleNewPrompt}
-                        selectedModel={selectedModel}
-                        onSelectedModelChange={setSelectedModel}
-                        isDragging={isDragging}
-                        setIsDragging={setIsDragging}
-                    />
-                </div>
-                <main className="flex-1 overflow-y-auto">
-                    <ErrorBoundary>
-                        <PromptList
-                            prompts={prompts}
-                            onEditPrompt={handleEditPrompt}
-                            onMoveToTrash={handleMoveToTrash}
-                            onDeletePermanently={handleDeletePermanently}
-                            onToggleFavorite={handleToggleFavorite}
-                            selectedFolderName={getFolderName(selectedFolderId)}
+            <div className="flex flex-col h-screen font-sans bg-theme-default text-theme-default">
+                <header className="flex justify-end items-center p-4 bg-theme-secondary border-b border-theme-default">
+                    <button
+                        onClick={() => logout()}
+                        className="flex items-center gap-2 px-4 py-2 bg-theme-primary hover:bg-theme-primary-hover text-white rounded-md font-medium transition-colors"
+                    >
+                        <span>Logout</span>
+                    </button>
+                </header>
+                <div className="flex flex-1 overflow-hidden">
+                    <div className="w-96 flex-shrink-0">
+                        <Sidebar
                             folders={folders}
+                            trashFolder={trashFolder}
+                            selectedFolderId={selectedFolderId}
+                            onSelectFolder={handleSelectFolder}
+                            onCreateFolder={handleCreateFolder}
+                            onRenameFolder={handleRenameFolder}
+                            onDeleteFolder={handleDeleteFolder}
+                            onMoveFolder={handleMoveFolder}
                             onMovePrompt={handleMovePrompt}
+                            onMoveUp={handleMoveUp}
+                            onMoveDown={handleMoveDown}
+                            newFolderParentId={newFolderParentId}
+                            onNewFolderRequest={(parentId) => setNewFolderParentId(parentId)}
+                            onCancelNewFolder={() => setNewFolderParentId(undefined)}
+                            onNewPrompt={handleNewPrompt}
+                            selectedModel={selectedModel}
+                            onSelectedModelChange={setSelectedModel}
                             isDragging={isDragging}
                             setIsDragging={setIsDragging}
                         />
-                    </ErrorBoundary>
-                </main>
-                
-                {isEditorOpen && editingPrompt && (
-                    <ErrorBoundary>
-                        <PromptEditor
-                            prompt={editingPrompt}
-                            folders={folders} 
-                            onSave={handleSavePrompt}
-                            onClose={() => setIsEditorOpen(false)}
-                            selectedModel={selectedModel}
-                        />
-                    </ErrorBoundary>
-                )}
+                    </div>
+                    <main className="flex-1 overflow-y-auto">
+                        <ErrorBoundary>
+                            <PromptList
+                                prompts={prompts}
+                                onEditPrompt={handleEditPrompt}
+                                onMoveToTrash={handleMoveToTrash}
+                                onDeletePermanently={handleDeletePermanently}
+                                onToggleFavorite={handleToggleFavorite}
+                                selectedFolderName={getFolderName(selectedFolderId)}
+                                folders={folders}
+                                onMovePrompt={handleMovePrompt}
+                                isDragging={isDragging}
+                                setIsDragging={setIsDragging}
+                            />
+                        </ErrorBoundary>
+                    </main>
+                    
+                    {isEditorOpen && editingPrompt && (
+                        <ErrorBoundary>
+                            <PromptEditor
+                                prompt={editingPrompt}
+                                folders={folders} 
+                                onSave={handleSavePrompt}
+                                onClose={() => setIsEditorOpen(false)}
+                                selectedModel={selectedModel}
+                            />
+                        </ErrorBoundary>
+                    )}
+                </div>
             </div>
         </ThemeProvider>
     );

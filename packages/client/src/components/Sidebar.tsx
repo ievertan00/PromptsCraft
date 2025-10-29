@@ -173,15 +173,6 @@ const Sidebar: React.FC<SidebarProps> = ({
             <div className="p-4 border-t border-theme-default mb-4">
                 <ThemeSelector />
             </div>
-            <div className="p-4 border-t border-theme-default mt-auto pt-4">
-                <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-3 p-2 rounded-md text-left text-sm font-medium transition-colors text-theme-secondary hover:bg-theme-tertiary"
-                >
-                    <LogoutIcon className="w-5 h-5 shrink-0" />
-                    <span>Logout</span>
-                </button>
-            </div>
         </div>
     );
 };

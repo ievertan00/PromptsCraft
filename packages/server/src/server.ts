@@ -2,7 +2,13 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { Pool, QueryResult } from 'pg';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { suggestTags, refinePrompt, suggestTitle } from './services/serverAiService.js';
+
+// For resolving __dirname in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -51,6 +57,9 @@ async function main() {
 
     app.use(cors());
     app.use(express.json());
+
+    // Serve static files from the React app build directory
+    app.use(express.static(path.join(__dirname, '../public')));
 
     app.get('/api/folders', async (req, res) => {
         const { rows } = await pool.query('SELECT * FROM folders WHERE is_system = 0 ORDER BY sort_order');
@@ -321,6 +330,15 @@ async function main() {
     // Health check endpoint for Render
     app.get('/', (req, res) => {
         res.json({ status: 'OK', message: 'PromptsCraft server is running' });
+    });
+
+    // Serve React app for any non-API routes
+    app.get('*', (req, res) => {
+        if (!req.path.startsWith('/api/')) {
+            res.sendFile(path.join(__dirname, '../public', 'index.html'));
+        } else {
+            res.status(404).json({ error: 'Route not found' });
+        }
     });
 
     app.listen(port, () => {

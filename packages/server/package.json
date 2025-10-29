@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && cd ../client && pnpm build && cd ../server && if not exist dist\\public mkdir dist\\public && xcopy /E /I /Y ..\\client\\dist\\* dist\\public\\",
     "start": "node dist/server.js"
   },
   "dependencies": {

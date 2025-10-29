@@ -1,6 +1,6 @@
 import type { Folder, Prompt } from '../types';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+const API_URL = process.env.REACT_APP_API_URL || '/api';
 
 // Helper to build the folder tree structure from a flat list
 const buildFolderTree = (items: Folder[], parentId: string | null = null): Folder[] => {

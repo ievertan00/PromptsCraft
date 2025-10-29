@@ -52,9 +52,9 @@ const Sidebar: React.FC<SidebarProps> = ({
     selectedModel,
     onSelectedModelChange,
     isDragging,
-    setIsDragging
+    setIsDragging,
+    onLogout
 }) => {
-    const { logout } = useAuth();
 
     const handleDropOnRoot = (e: React.DragEvent) => {
         e.preventDefault();
@@ -67,10 +67,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
-    };
-
-    const handleLogout = () => {
-        logout();
     };
 
     return (

@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { Pool, QueryResult } from 'pg';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 import { suggestTags, refinePrompt, suggestTitle } from './services/serverAiService.js';
 
 // For resolving __dirname in ES modules
@@ -334,13 +335,15 @@ async function main() {
 
     // Serve React app for any non-API routes
     app.get(/^(?!\/api\/).*$/, (req, res) => {
-        // Try to serve the React app, with error handling
-        res.sendFile(path.join(__dirname, 'public', 'index.html'), (err) => {
-            if (err) {
-                console.error('Error serving React app:', err);
-                res.status(500).send('Server error: unable to serve frontend');
-            }
-        });
+        const indexPath = path.join(__dirname, 'public', 'index.html');
+        
+        // Check if the file exists before trying to send it
+        if (require('fs').existsSync(indexPath)) {
+            res.sendFile(indexPath);
+        } else {
+            console.error('React app build not found at:', indexPath);
+            res.status(500).send('Frontend not built yet - please wait for deployment to complete or contact the administrator');
+        }
     });
 
     app.listen(port, () => {

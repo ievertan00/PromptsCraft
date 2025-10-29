@@ -335,7 +335,13 @@ async function main() {
     // Serve React app for any non-API routes
     app.get('*', (req, res) => {
         if (!req.path.startsWith('/api/')) {
-            res.sendFile(path.join(__dirname, '../public', 'index.html'));
+            // Try to serve the React app, with error handling
+            res.sendFile(path.join(__dirname, '../public', 'index.html'), (err) => {
+                if (err) {
+                    console.error('Error serving React app:', err);
+                    res.status(500).send('Server error: unable to serve frontend');
+                }
+            });
         } else {
             res.status(404).json({ error: 'Route not found' });
         }

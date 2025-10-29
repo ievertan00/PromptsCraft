@@ -327,8 +327,8 @@ async function main() {
         }
     });
 
-    // Health check endpoint for Render
-    app.get('/', (req, res) => {
+    // Health check endpoint for Render - keep it on a specific path
+    app.get('/health', (req, res) => {
         res.json({ status: 'OK', message: 'PromptsCraft server is running' });
     });
 

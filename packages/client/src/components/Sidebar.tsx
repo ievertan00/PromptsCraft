@@ -30,6 +30,7 @@ interface SidebarProps {
     onSelectedModelChange: (model: SupportedModel) => void;
     isDragging: boolean;
     setIsDragging: (isDragging: boolean) => void;
+    onLogout: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
@@ -83,6 +84,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <LogoIcon className="w-8 h-8 text-theme-primary-light flex-shrink-0" />
                     <h1 className="text-xl font-bold text-theme-default">PromptsCraft</h1>
                 </div>
+                <button
+                    onClick={onLogout}
+                    className="p-2 rounded-md hover:bg-theme-tertiary transition-colors"
+                    title="Logout"
+                >
+                    <LogoutIcon className="w-5 h-5 text-theme-secondary" />
+                </button>
             </div>
             <div className="p-4 border-b border-theme-default">
                 <button

@@ -5,21 +5,22 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon",
-    "build": "tsc -p tsconfig.json && cd ../client && pnpm build && cd ../server && node -e \"require('fs').mkdirSync('dist/public', {recursive: true}); const fs = require('fs-extra'); fs.copySync('../client/dist', 'dist/public');\"",
+    "build": "tsc -p tsconfig.json && cd ../client && pnpm build && cd ../server && node -e \"require('fs').mkdirSync('dist/public', {recursive: true}); const fs = require('fs'); const path = require('path'); const sourceDir = path.resolve(__dirname, '../client/dist'); const destDir = path.resolve(__dirname, 'dist/public'); const copyRecursiveSync = (src, dest) => { const exists = fs.existsSync(src); if (!exists) return; const stats = fs.statSync(src); const isDirectory = stats.isDirectory(); if (isDirectory) { fs.mkdirSync(dest, { recursive: true }); fs.readdirSync(src).forEach(item => copyRecursiveSync(path.join(src, item), path.join(dest, item))); } else { fs.copyFileSync(src, dest); } }; copyRecursiveSync(sourceDir, destDir);\"",
     "start": "node dist/server.js"
   },
   "dependencies": {
     "@google/genai": "^1.21.0",
     "@google/generative-ai": "^0.24.1",
+    "@vscode/sqlite3": "5.1.8-vscode",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "fs-extra": "^11.2.0",
+    "openai": "^4.0.0",
+    "pg": "^8.12.0",
     "shared": "workspace:*",
     "sqlite": "^5.1.1",
-    "sqlite-wasm": "^0.0.2",
-    "pg": "^8.12.0",
-    "openai": "^4.0.0",
-    "fs-extra": "^11.2.0"
+    "sqlite-wasm": "^0.0.2"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",

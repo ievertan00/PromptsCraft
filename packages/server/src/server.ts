@@ -59,7 +59,7 @@ async function main() {
     app.use(express.json());
 
     // Serve static files from the React app build directory
-    app.use(express.static(path.join(__dirname, '../public')));
+    app.use(express.static(path.join(__dirname, 'public')));
 
     app.get('/api/folders', async (req, res) => {
         const { rows } = await pool.query('SELECT * FROM folders WHERE is_system = 0 ORDER BY sort_order');
@@ -335,7 +335,7 @@ async function main() {
     // Serve React app for any non-API routes
     app.get(/^(?!\/api\/).*$/, (req, res) => {
         // Try to serve the React app, with error handling
-        res.sendFile(path.join(__dirname, '../public', 'index.html'), (err) => {
+        res.sendFile(path.join(__dirname, 'public', 'index.html'), (err) => {
             if (err) {
                 console.error('Error serving React app:', err);
                 res.status(500).send('Server error: unable to serve frontend');

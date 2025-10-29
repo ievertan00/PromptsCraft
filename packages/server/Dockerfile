@@ -5,7 +5,7 @@ FROM node:18-alpine
 WORKDIR /app
 
 # Install pnpm globally
-RUN npm install -g pnpm
+RUN npm install -g pnpm@9.15.9
 
 # Copy the root package files
 COPY package*.json pnpm-lock.yaml ./
@@ -16,8 +16,8 @@ COPY pnpm-workspace.yaml ./
 # Copy all packages
 COPY packages/ ./packages/
 
-# Install dependencies
-RUN pnpm install
+# Install dependencies without frozen lockfile to avoid issues
+RUN pnpm install --no-frozen-lockfile
 
 # Build the application
 RUN pnpm --filter server build

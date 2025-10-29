@@ -60,7 +60,7 @@ async function main() {
     app.use(express.json());
 
     // Serve static files from the React app build directory
-    app.use(express.static(path.join(__dirname, '../public')));
+    app.use(express.static(path.join(__dirname, 'public')));
 
     app.get('/api/folders', async (req, res) => {
         const { rows } = await pool.query('SELECT * FROM folders WHERE is_system = 0 ORDER BY sort_order');

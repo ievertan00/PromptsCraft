@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon",
-    "build": "tsc -p tsconfig.json && cd ../client && pnpm build && cd ../server && if not exist dist\\public mkdir dist\\public && xcopy /E /I /Y ..\\client\\dist\\* dist\\public\\",
+    "build": "tsc -p tsconfig.json && cd ../client && pnpm build && cd ../server && node -e \"require('fs').mkdirSync('dist/public', {recursive: true}); const fs = require('fs-extra'); fs.copySync('../client/dist', 'dist/public');\"",
     "start": "node dist/server.js"
   },
   "dependencies": {
@@ -18,7 +18,8 @@
     "sqlite": "^5.1.1",
     "sqlite-wasm": "^0.0.2",
     "pg": "^8.12.0",
-    "openai": "^4.0.0"
+    "openai": "^4.0.0",
+    "fs-extra": "^11.2.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",

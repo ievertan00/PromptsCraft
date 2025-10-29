@@ -24,8 +24,11 @@ import { SupportedModel } from './services/aiService';
 
 import ErrorBoundary from './components/ErrorBoundary';
 import { ThemeProvider } from './contexts/ThemeContext';
+import LoginPage from './components/LoginPage';
+import { useAuth } from './contexts/AuthContext';
 
 const App: React.FC = () => {
+    const { isAuthenticated } = useAuth();
     const [folders, setFolders] = useState<Folder[]>([]);
     const [trashFolder, setTrashFolder] = useState<Folder | null>(null);
     const [prompts, setPrompts] = useState<Prompt[]>([]);
@@ -50,26 +53,28 @@ const App: React.FC = () => {
 
     // Fetch folders once on mount
     useEffect(() => {
-        fetchAndSetFolders();
-        const fetchTrash = async () => {
-            const trash = await getTrashFolder();
-            setTrashFolder(trash);
-        };
-        fetchTrash();
-    }, []);
+        if (isAuthenticated) {
+            fetchAndSetFolders();
+            const fetchTrash = async () => {
+                const trash = await getTrashFolder();
+                setTrashFolder(trash);
+            };
+            fetchTrash();
+        }
+    }, [isAuthenticated]);
 
     // Fetch prompts whenever the selected folder changes
     useEffect(() => {
-        if (selectedFolderId) {
+        if (isAuthenticated && selectedFolderId) {
             fetchAndSetPrompts(selectedFolderId);
-        } else {
+        } else if (isAuthenticated && selectedFolderId === null) {
             const fetchAll = async () => {
                 const allPrompts = await getAllPrompts();
                 setPrompts(allPrompts);
             };
             fetchAll();
         }
-    }, [selectedFolderId]);
+    }, [selectedFolderId, isAuthenticated]);
 
     const handleSelectFolder = (folderId: string | null) => {
         setSelectedFolderId(folderId);
@@ -285,6 +290,10 @@ const App: React.FC = () => {
         
         return findFolder(folders, folderId)?.name || 'Prompts';
     };
+
+    if (!isAuthenticated) {
+        return <LoginPage />;
+    }
 
     return (
         <ThemeProvider>

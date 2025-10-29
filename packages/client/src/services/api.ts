@@ -2,6 +2,20 @@ import type { Folder, Prompt } from '../types';
 
 const API_URL = process.env.REACT_APP_API_URL || '/api';
 
+// Helper function to get auth headers
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('authToken');
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  return headers;
+};
+
 // Helper to build the folder tree structure from a flat list
 const buildFolderTree = (items: Folder[], parentId: string | null = null): Folder[] => {
     return items
@@ -13,18 +27,24 @@ const buildFolderTree = (items: Folder[], parentId: string | null = null): Folde
 };
 
 export const getFolders = async (): Promise<Folder[]> => {
-    const response = await fetch(`${API_URL}/folders`);
+    const response = await fetch(`${API_URL}/folders`, {
+        headers: getAuthHeaders(),
+    });
     const folders: Folder[] = await response.json();
     return buildFolderTree(folders);
 };
 
 export const getTrashFolder = async (): Promise<Folder> => {
-    const response = await fetch(`${API_URL}/trash-folder`);
+    const response = await fetch(`${API_URL}/trash-folder`, {
+        headers: getAuthHeaders(),
+    });
     return await response.json();
 };
 
 export const getPromptsByFolderId = async (folderId: string): Promise<Prompt[]> => {
-    const response = await fetch(`${API_URL}/folders/${folderId}/prompts`);
+    const response = await fetch(`${API_URL}/folders/${folderId}/prompts`, {
+        headers: getAuthHeaders(),
+    });
     const prompts = await response.json();
     return prompts.map((prompt: any) => ({
         ...prompt,
@@ -34,7 +54,9 @@ export const getPromptsByFolderId = async (folderId: string): Promise<Prompt[]> 
 };
 
 export const getAllPrompts = async (): Promise<Prompt[]> => {
-    const response = await fetch(`${API_URL}/prompts`);
+    const response = await fetch(`${API_URL}/prompts`, {
+        headers: getAuthHeaders(),
+    });
     const prompts = await response.json();
     return prompts.map((prompt: any) => ({
         ...prompt,
@@ -44,7 +66,9 @@ export const getAllPrompts = async (): Promise<Prompt[]> => {
 };
 
 export const getTopTags = async (): Promise<string[]> => {
-    const response = await fetch(`${API_URL}/tags/top`);
+    const response = await fetch(`${API_URL}/tags/top`, {
+        headers: getAuthHeaders(),
+    });
     if (!response.ok) {
         throw new Error('Failed to fetch top tags');
     }
@@ -58,9 +82,7 @@ export const savePrompt = async (promptToSave: Prompt): Promise<Prompt> => {
 
     const response = await fetch(url, {
         method,
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(promptToSave),
     });
     if (!response.ok) {
@@ -71,7 +93,9 @@ export const savePrompt = async (promptToSave: Prompt): Promise<Prompt> => {
 };
 
 export const getPrompt = async (promptId: string): Promise<Prompt | undefined> => {
-    const response = await fetch(`${API_URL}/prompts/${promptId}`);
+    const response = await fetch(`${API_URL}/prompts/${promptId}`, {
+        headers: getAuthHeaders(),
+    });
     const prompt = await response.json();
     if (prompt) {
         return {
@@ -86,9 +110,7 @@ export const getPrompt = async (promptId: string): Promise<Prompt | undefined> =
 export const createFolder = async (name: string, parentId: string | null): Promise<Folder> => {
     const response = await fetch(`${API_URL}/folders`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ name, parent_id: parentId }),
     });
     return await response.json();
@@ -97,9 +119,7 @@ export const createFolder = async (name: string, parentId: string | null): Promi
 export const renameFolder = async (folderId: string, newName: string): Promise<Folder> => {
     const response = await fetch(`${API_URL}/folders/${folderId}`, {
         method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ name: newName }),
     });
     return await response.json();
@@ -108,27 +128,28 @@ export const renameFolder = async (folderId: string, newName: string): Promise<F
 export const deleteFolder = async (folderId: string): Promise<void> => {
     await fetch(`${API_URL}/folders/${folderId}`, {
         method: 'DELETE',
+        headers: getAuthHeaders(),
     });
 };
 
 export const deletePrompt = async (promptId: string): Promise<void> => {
     await fetch(`${API_URL}/prompts/${promptId}`, {
         method: 'DELETE',
+        headers: getAuthHeaders(),
     });
 };
 
 export const movePromptToTrash = async (promptId: string): Promise<void> => {
     await fetch(`${API_URL}/prompts/${promptId}/move-to-trash`, {
         method: 'PUT',
+        headers: getAuthHeaders(),
     });
 };
 
 export const updatePromptFavoriteStatus = async (promptId: string, isFavorite: boolean): Promise<void> => {
     await fetch(`${API_URL}/prompts/${promptId}/favorite`, {
         method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ is_favorite: isFavorite }),
     });
 };
@@ -136,9 +157,7 @@ export const updatePromptFavoriteStatus = async (promptId: string, isFavorite: b
 export const moveFolder = async (folderId: string, newParentId: string | null): Promise<Folder> => {
     const response = await fetch(`${API_URL}/folders/${folderId}/move`, {
         method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ parent_id: newParentId }),
     });
     return await response.json();
@@ -147,9 +166,7 @@ export const moveFolder = async (folderId: string, newParentId: string | null): 
 export const moveFolderUp = async (folderId: string): Promise<void> => {
     await fetch(`${API_URL}/folders/${folderId}/reorder`, {
         method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ direction: 'up' }),
     });
 };
@@ -157,9 +174,7 @@ export const moveFolderUp = async (folderId: string): Promise<void> => {
 export const moveFolderDown = async (folderId: string): Promise<void> => {
     await fetch(`${API_URL}/folders/${folderId}/reorder`, {
         method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ direction: 'down' }),
     });
 };

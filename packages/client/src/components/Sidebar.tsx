@@ -5,7 +5,9 @@ import FolderTree from './FolderTree';
 import { PlusIcon } from './icons/PlusIcon';
 import { BrainIcon } from './icons/BrainIcon';
 import { DeleteIcon } from './icons/DeleteIcon';
+import { LogoutIcon } from './icons/LogoutIcon';
 import ThemeSelector from './ThemeSelector';
+import { useAuth } from '../contexts/AuthContext';
 import type { SupportedModel } from '../services/aiService';
 
 interface SidebarProps {
@@ -25,6 +27,7 @@ interface SidebarProps {
     onCancelNewFolder: () => void;
     onNewPrompt: () => void;
     selectedModel: SupportedModel;
+    onSelectedModelChange: (model: SupportedModel) => void;
     isDragging: boolean;
     setIsDragging: (isDragging: boolean) => void;
 }
@@ -50,6 +53,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     isDragging,
     setIsDragging
 }) => {
+    const { logout } = useAuth();
 
     const handleDropOnRoot = (e: React.DragEvent) => {
         e.preventDefault();
@@ -62,6 +66,10 @@ const Sidebar: React.FC<SidebarProps> = ({
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
+    };
+
+    const handleLogout = () => {
+        logout();
     };
 
     return (
@@ -164,6 +172,15 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
             <div className="p-4 border-t border-theme-default mb-4">
                 <ThemeSelector />
+            </div>
+            <div className="p-4 border-t border-theme-default mt-auto pt-4">
+                <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 p-2 rounded-md text-left text-sm font-medium transition-colors text-theme-secondary hover:bg-theme-tertiary"
+                >
+                    <LogoutIcon className="w-5 h-5 shrink-0" />
+                    <span>Logout</span>
+                </button>
             </div>
         </div>
     );

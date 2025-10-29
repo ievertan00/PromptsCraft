@@ -67,7 +67,7 @@ async function main() {
 
         if (parent_id) {
             const parentFolderRes = await pool.query('SELECT * FROM folders WHERE id = ', [parent_id]);
-            if (parentFolderRes.rowCount > 0 && parentFolderRes.rows[0].is_system) {
+            if (parentFolderRes && parentFolderRes.rowCount > 0 && parentFolderRes.rows[0].is_system) {
                 return res.status(403).json({ error: 'Cannot create subfolders in a system folder.' });
             }
         }
@@ -82,7 +82,7 @@ async function main() {
 
     app.put('/api/folders/:id', async (req, res) => {
         const folderRes = await pool.query('SELECT * FROM folders WHERE id = ', [req.params.id]);
-        if (folderRes.rowCount > 0 && folderRes.rows[0].is_system) {
+        if (folderRes && folderRes.rowCount > 0 && folderRes.rows[0].is_system) {
             return res.status(403).json({ error: 'System folders cannot be modified.' });
         }
         const { name } = req.body;
@@ -130,10 +130,10 @@ async function main() {
                 );
             }
 
-            if (otherFolderRes.rowCount > 0) {
+            if (otherFolderRes && otherFolderRes.rowCount > 0) {
                 const otherFolder = otherFolderRes.rows[0];
-                await pool.query('UPDATE folders SET sort_order =  WHERE id = $2', [otherFolder.sort_order, folder.id]);
-                await pool.query('UPDATE folders SET sort_order =  WHERE id = $2', [folder.sort_order, otherFolder.id]);
+                await pool.query('UPDATE folders SET sort_order = $1 WHERE id = $2', [otherFolder.sort_order, folder.id]);
+                await pool.query('UPDATE folders SET sort_order = $1 WHERE id = $2', [folder.sort_order, otherFolder.id]);
             }
 
             await pool.query('COMMIT');
@@ -146,8 +146,8 @@ async function main() {
 
     app.put('/api/folders/:id/move', async (req, res) => {
         const folderId = Number(req.params.id);
-        const folderRes = await pool.query('SELECT * FROM folders WHERE id = ', [folderId]);
-        if (folderRes.rowCount > 0 && folderRes.rows[0].is_system) {
+        const folderRes = await pool.query('SELECT * FROM folders WHERE id = $1', [folderId]);
+        if (folderRes && folderRes.rowCount > 0 && folderRes.rows[0].is_system) {
             return res.status(403).json({ error: 'System folders cannot be moved.' });
         }
 

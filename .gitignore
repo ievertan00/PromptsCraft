@@ -1,5 +1,5 @@
 # Dependency Directories
-/node_modules
+**/node_modules
 
 # Build/Dist/Artifact Directories
 /dist
@@ -18,9 +18,3 @@ packages/server/.env
 # Logs and local artifacts
 npm-debug.log*
 yarn-debug.log*
-
-.gemini
-
-*.md
-!README.md
-.genkit

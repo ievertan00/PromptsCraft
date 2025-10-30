@@ -35,7 +35,7 @@ const getAiClient = (model: SupportedModel) => {
   const { geminiApiKey, deepseekApiKey } = getApiKeys();
 
   if (model === 'gemini') {
-    const modelName = 'gemini-2.5-flash';
+    const modelName = 'gemini-1.5-flash';
     return new GoogleGenerativeAI(geminiApiKey).getGenerativeModel({ model: modelName });
   } else if (model === 'deepseek') {
     return new OpenAI({ baseURL: 'https://api.deepseek.com', apiKey: deepseekApiKey });

@@ -35,7 +35,7 @@ const getAiClient = (model: SupportedModel) => {
   const { geminiApiKey, deepseekApiKey } = getApiKeys();
 
   if (model === 'gemini') {
-    const modelName = 'gemini-1.5-flash';
+    const modelName = 'gemini-2.5-flash';
     return new GoogleGenerativeAI(geminiApiKey).getGenerativeModel({ model: modelName });
   } else if (model === 'deepseek') {
     return new OpenAI({ baseURL: 'https://api.deepseek.com', apiKey: deepseekApiKey });
@@ -59,26 +59,35 @@ const generateContent = async (
     let text = '';
 
     if (aiClient instanceof GenerativeModel && selectedModel === 'gemini') {
-      const result = await aiClient.generateContent({
-        contents: [{ role: "user", parts: [{ text: systemInstruction + '\n\n' + extendedPrompt }] }],
-        generationConfig: {
-          responseMimeType: response_format?.type === 'json_object' ? 'application/json' : 'text/plain',
-        },
-      });
-
-      const candidate = result.response.candidates?.[0];
-      if (candidate) text = result.response.text();
+      try {
+        const result = await aiClient.generateContent({
+          contents: [{ role: "user", parts: [{ text: systemInstruction + '\n\n' + extendedPrompt }] }],
+          generationConfig: {
+            responseMimeType: response_format?.type === 'json_object' ? 'application/json' : 'text/plain',
+          },
+        });
+        const candidate = result.response.candidates?.[0];
+        if (candidate) text = result.response.text();
+      } catch (error) {
+        console.error(`Error specifically from Gemini API:`, error);
+        throw error; // Re-throw the error to be caught by the outer catch block
+      }
     } else if (aiClient instanceof OpenAI && selectedModel === 'deepseek') {
-      const completion = await aiClient.chat.completions.create({
-        messages: [
-          { role: "system", content: systemInstruction },
-          { role: "user", content: extendedPrompt },
-        ],
-        model: "deepseek-chat",
-        response_format: response_format,
-      });
-      const choice = completion.choices[0];
-      if (choice) text = choice.message?.content ?? '';
+      try {
+        const completion = await aiClient.chat.completions.create({
+          messages: [
+            { role: "system", content: systemInstruction },
+            { role: "user", content: extendedPrompt },
+          ],
+          model: "deepseek-chat",
+          response_format: response_format,
+        });
+        const choice = completion.choices[0];
+        if (choice) text = choice.message?.content ?? '';
+      } catch (error) {
+        console.error(`Error specifically from Deepseek API:`, error);
+        throw error; // Re-throw the error to be caught by the outer catch block
+      }
     } else {
       throw new Error("Invalid AI client or model configuration.");
     }

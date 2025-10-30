@@ -1,13 +1,12 @@
 import { SupportedModel } from '../types';
+import { getAuthHeaders } from './api';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/ai';
 
 export const suggestTags = async (promptContent: string, selectedModel: SupportedModel): Promise<string[]> => {
     const response = await fetch(`${API_BASE_URL}/suggest-tags`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ promptContent, selectedModel }),
     });
 
@@ -23,9 +22,7 @@ export const suggestTags = async (promptContent: string, selectedModel: Supporte
 export const refinePrompt = async (promptContent: string, selectedModel: SupportedModel, options: { persona?: boolean; task?: boolean; context?: boolean; format?: boolean; max_tokens?: number }): Promise<string> => {
     const response = await fetch(`${API_BASE_URL}/refine-prompt`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ promptContent, selectedModel, ...options }),
     });
 
@@ -41,9 +38,7 @@ export const refinePrompt = async (promptContent: string, selectedModel: Support
 export const suggestTitle = async (promptContent: string, selectedModel: SupportedModel): Promise<string> => {
     const response = await fetch(`${API_BASE_URL}/suggest-title`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ promptContent, selectedModel }),
     });
 

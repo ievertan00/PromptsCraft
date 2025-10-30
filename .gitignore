@@ -2,7 +2,7 @@
 **/node_modules
 
 # Build/Dist/Artifact Directories
-/dist
+**/dist
 /build
 
 # IDE and OS Files

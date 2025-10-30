@@ -3,7 +3,7 @@ import type { Folder, Prompt } from '../types';
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 // Helper function to get auth headers
-const getAuthHeaders = () => {
+export const getAuthHeaders = () => {
   const token = localStorage.getItem('authToken');
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',

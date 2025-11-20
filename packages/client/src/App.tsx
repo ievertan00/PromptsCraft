@@ -110,7 +110,7 @@ const App: React.FC = () => {
             setIsEditorOpen(false);
             setEditingPrompt(null);
             
-            const promptIsInCurrentView = selectedFolderId === savedPrompt.folder_id;
+            const promptIsInCurrentView = selectedFolderId === promptToSave.folder_id;
 
             if (promptIsInCurrentView) {
                 await fetchAndSetPrompts(selectedFolderId!);
@@ -118,7 +118,7 @@ const App: React.FC = () => {
                 const allPrompts = await getAllPrompts();
                 setPrompts(allPrompts);
             } else {
-                setSelectedFolderId(savedPrompt.folder_id);
+                setSelectedFolderId(promptToSave.folder_id);
             }
         } catch (error) {
             console.error("Failed to save prompt:", error);

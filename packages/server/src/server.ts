@@ -285,8 +285,11 @@ async function main() {
 
     app.put('/api/prompts/:id', authenticateToken, async (req, res) => {
         const { title, prompt, tags, folder_id } = req.body;
-        await pool.query('UPDATE prompts SET title = $1, prompt = $2, tags = $3, folder_id = $4 WHERE id = $5', [title, prompt, JSON.stringify(tags), folder_id, req.params.id]);
-        res.json({ message: 'updated' });
+        const result = await pool.query('UPDATE prompts SET title = $1, prompt = $2, tags = $3, folder_id = $4 WHERE id = $5 RETURNING *', [title, prompt, JSON.stringify(tags), folder_id, req.params.id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Prompt not found' });
+        }
+        res.json(result.rows[0]);
     });
 
     app.put('/api/prompts/:id/favorite', authenticateToken, async (req, res) => {

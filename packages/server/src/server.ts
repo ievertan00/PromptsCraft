@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
+import 'dotenv/config';
 import { Pool, QueryResult } from 'pg';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -12,7 +12,7 @@ import crypto from 'crypto';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config();
+
 
 // Default user credentials (in a real app, this would be stored securely)
 const DEFAULT_USERNAME = 'evertan';

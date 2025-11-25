@@ -1,8 +1,8 @@
 import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
 import OpenAI from "openai";
-import dotenv from 'dotenv';
+import 'dotenv/config';
 
-dotenv.config();
+
 
 // Logging utility with environment-based toggle
 const isLoggingEnabled = process.env.ENABLE_LLM_LOGS === 'true';

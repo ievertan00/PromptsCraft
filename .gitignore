@@ -20,3 +20,9 @@ npm-debug.log*
 yarn-debug.log*
 .ignore
 .genkit
+
+
+
+GEMINI.md
+TECHNICAL_DOCS.md
+TECHNICAL_DOCUMENTATION.md

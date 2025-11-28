@@ -1,20 +1,23 @@
-import type { Folder, Prompt } from '../types';
+import axios from 'axios';
+import type { Folder, Prompt } from 'shared/types';
 
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+const api = axios.create({
+    baseURL: import.meta.env.VITE_API_URL || '/api',
+});
 
-// Helper function to get auth headers
-export const getAuthHeaders = () => {
-  const token = localStorage.getItem('authToken');
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
-  
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  
-  return headers;
-};
+// Add a request interceptor to include the token in headers
+api.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('authToken');
+        if (token) {
+            config.headers['Authorization'] = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
 
 // Helper to build the folder tree structure from a flat list
 const buildFolderTree = (items: Folder[], parentId: string | null = null): Folder[] => {
@@ -27,26 +30,18 @@ const buildFolderTree = (items: Folder[], parentId: string | null = null): Folde
 };
 
 export const getFolders = async (): Promise<Folder[]> => {
-    const response = await fetch(`${API_URL}/folders`, {
-        headers: getAuthHeaders(),
-    });
-    const folders: Folder[] = await response.json();
-    return buildFolderTree(folders);
+    const response = await api.get('/folders');
+    return buildFolderTree(response.data);
 };
 
 export const getTrashFolder = async (): Promise<Folder> => {
-    const response = await fetch(`${API_URL}/trash-folder`, {
-        headers: getAuthHeaders(),
-    });
-    return await response.json();
+    const response = await api.get('/folders/trash');
+    return response.data;
 };
 
 export const getPromptsByFolderId = async (folderId: string): Promise<Prompt[]> => {
-    const response = await fetch(`${API_URL}/folders/${folderId}/prompts`, {
-        headers: getAuthHeaders(),
-    });
-    const prompts = await response.json();
-    return prompts.map((prompt: any) => ({
+    const response = await api.get(`/folders/${folderId}/prompts`);
+    return response.data.map((prompt: any) => ({
         ...prompt,
         tags: typeof prompt.tags === 'string' ? JSON.parse(prompt.tags) : prompt.tags,
         isFavorite: !!prompt.is_favorite,
@@ -54,11 +49,8 @@ export const getPromptsByFolderId = async (folderId: string): Promise<Prompt[]> 
 };
 
 export const getAllPrompts = async (): Promise<Prompt[]> => {
-    const response = await fetch(`${API_URL}/prompts`, {
-        headers: getAuthHeaders(),
-    });
-    const prompts = await response.json();
-    return prompts.map((prompt: any) => ({
+    const response = await api.get('/prompts');
+    return response.data.map((prompt: any) => ({
         ...prompt,
         tags: typeof prompt.tags === 'string' ? JSON.parse(prompt.tags) : prompt.tags,
         isFavorite: !!prompt.is_favorite,
@@ -66,115 +58,68 @@ export const getAllPrompts = async (): Promise<Prompt[]> => {
 };
 
 export const getTopTags = async (): Promise<string[]> => {
-    const response = await fetch(`${API_URL}/tags/top`, {
-        headers: getAuthHeaders(),
-    });
-    if (!response.ok) {
-        throw new Error('Failed to fetch top tags');
-    }
-    return await response.json();
+    const response = await api.get('/tags/top');
+    return response.data;
 };
 
 export const savePrompt = async (promptToSave: Prompt): Promise<Prompt> => {
     const isNew = typeof promptToSave.id === 'string' && promptToSave.id.startsWith('new-');
-    const method = isNew ? 'POST' : 'PUT';
-    const url = isNew ? `${API_URL}/prompts` : `${API_URL}/prompts/${promptToSave.id}`;
-
-    const response = await fetch(url, {
-        method,
-        headers: getAuthHeaders(),
-        body: JSON.stringify(promptToSave),
-    });
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to save prompt');
-    }
-    return await response.json();
+    const method = isNew ? 'post' : 'put';
+    const url = isNew ? '/prompts' : `/prompts/${promptToSave.id}`;
+    
+    const response = await api[method](url, promptToSave);
+    return response.data;
 };
 
 export const getPrompt = async (promptId: string): Promise<Prompt | undefined> => {
-    const response = await fetch(`${API_URL}/prompts/${promptId}`, {
-        headers: getAuthHeaders(),
-    });
-    const prompt = await response.json();
-    if (prompt) {
+    const response = await api.get(`/prompts/${promptId}`);
+    if (response.data) {
         return {
-            ...prompt,
-            tags: typeof prompt.tags === 'string' ? JSON.parse(prompt.tags) : prompt.tags,
-            isFavorite: !!prompt.is_favorite,
+            ...response.data,
+            tags: typeof response.data.tags === 'string' ? JSON.parse(response.data.tags) : response.data.tags,
+            isFavorite: !!response.data.is_favorite,
         };
     }
     return undefined;
 }
 
 export const createFolder = async (name: string, parentId: string | null): Promise<Folder> => {
-    const response = await fetch(`${API_URL}/folders`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ name, parent_id: parentId }),
-    });
-    return await response.json();
+    const response = await api.post('/folders', { name, parent_id: parentId });
+    return response.data;
 };
 
 export const renameFolder = async (folderId: string, newName: string): Promise<Folder> => {
-    const response = await fetch(`${API_URL}/folders/${folderId}`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ name: newName }),
-    });
-    return await response.json();
+    const response = await api.put(`/folders/${folderId}`, { name: newName });
+    return response.data;
 };
 
 export const deleteFolder = async (folderId: string): Promise<void> => {
-    await fetch(`${API_URL}/folders/${folderId}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders(),
-    });
+    await api.delete(`/folders/${folderId}`);
 };
 
 export const deletePrompt = async (promptId: string): Promise<void> => {
-    await fetch(`${API_URL}/prompts/${promptId}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders(),
-    });
+    await api.delete(`/prompts/${promptId}`);
 };
 
 export const movePromptToTrash = async (promptId: string): Promise<void> => {
-    await fetch(`${API_URL}/prompts/${promptId}/move-to-trash`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-    });
+    await api.put(`/prompts/${promptId}/move-to-trash`);
 };
 
 export const updatePromptFavoriteStatus = async (promptId: string, isFavorite: boolean): Promise<void> => {
-    await fetch(`${API_URL}/prompts/${promptId}/favorite`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ is_favorite: isFavorite }),
-    });
+    await api.put(`/prompts/${promptId}/favorite`, { is_favorite: isFavorite });
 };
 
 export const moveFolder = async (folderId: string, newParentId: string | null): Promise<Folder> => {
-    const response = await fetch(`${API_URL}/folders/${folderId}/move`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ parent_id: newParentId }),
-    });
-    return await response.json();
+    const response = await api.put(`/folders/${folderId}/move`, { parent_id: newParentId });
+    return response.data;
 };
 
 export const moveFolderUp = async (folderId: string): Promise<void> => {
-    await fetch(`${API_URL}/folders/${folderId}/reorder`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ direction: 'up' }),
-    });
+    await api.put(`/folders/${folderId}/reorder`, { direction: 'up' });
 };
 
 export const moveFolderDown = async (folderId: string): Promise<void> => {
-    await fetch(`${API_URL}/folders/${folderId}/reorder`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ direction: 'down' }),
-    });
+    await api.put(`/folders/${folderId}/reorder`, { direction: 'down' });
 };
+
+export { api };

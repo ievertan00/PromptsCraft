@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import type { Prompt, Folder } from '../types';
+import type { Prompt, Folder } from 'shared/types';
 import { getTopTags } from '../services/api';
 import { KebabMenuIcon } from './icons/KebabMenuIcon';
 import { getTagColorClasses } from '../constants/colors';
@@ -11,16 +11,10 @@ import { StarFilledIcon } from './icons/StarFilledIcon';
 import { BriefcaseIcon } from './icons/BriefcaseIcon';
 import FolderSelectModal from './FolderSelectModal';
 import DeletePromptConfirmModal from './DeletePromptConfirmModal';
+import { usePrompts } from '../contexts/PromptContext';
+import { useFolders } from '../contexts/FolderContext';
 
 interface PromptListProps {
-    prompts: Prompt[];
-    selectedFolderName: string;
-    onEditPrompt: (prompt: Prompt) => void;
-    onMoveToTrash: (promptId: string) => void;
-    onDeletePermanently: (promptId: string) => void;
-    onToggleFavorite: (promptId: string) => void;
-    folders: Folder[];
-    onMovePrompt: (promptId: string, newFolderId: string) => void;
     isDragging: boolean;
     setIsDragging: (isDragging: boolean) => void;
 }
@@ -80,7 +74,7 @@ const PromptCard: React.FC<{
         >
             <div className="absolute top-2 right-2 flex items-center" ref={menuRef}>
                 <button onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }} className="p-1 rounded-full bg-theme-secondary opacity-0 group-hover:opacity-100 hover:bg-theme-hover focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-theme-primary-light transition-opacity">
-                    {prompt.isFavorite ? <StarFilledIcon className="w-5 h-5 text-yellow-400" /> : <StarIcon className="w-5 h-5 text-theme-secondary" />}
+                    {prompt.is_favorite ? <StarFilledIcon className="w-5 h-5 text-yellow-400" /> : <StarIcon className="w-5 h-5 text-theme-secondary" />}
                 </button>
                 <button 
                     onClick={(e) => {
@@ -159,7 +153,9 @@ const PromptCard: React.FC<{
     );
 };
 
-const PromptList: React.FC<PromptListProps> = ({ prompts, selectedFolderName, onEditPrompt, onMoveToTrash, onDeletePermanently, onToggleFavorite, folders, onMovePrompt, isDragging, setIsDragging }) => {
+const PromptList: React.FC<PromptListProps> = ({ isDragging, setIsDragging }) => {
+    const { prompts, setEditingPrompt, setIsEditorOpen, movePromptToTrash, deletePrompt, toggleFavorite, movePrompt } = usePrompts();
+    const { selectedFolderName, folders } = useFolders();
     const [searchTerm, setSearchTerm] = useState('');
     const [topTags, setTopTags] = useState<string[]>([]);
 
@@ -184,10 +180,15 @@ const PromptList: React.FC<PromptListProps> = ({ prompts, selectedFolderName, on
         );
     }, [prompts, searchTerm]);
 
-    const favoritePrompts = useMemo(() => prompts.filter(p => p.isFavorite), [prompts]);
+    const favoritePrompts = useMemo(() => prompts.filter(p => p.is_favorite), [prompts]);
 
     const handleTagClick = (tag: string) => {
         setSearchTerm(`#${tag}`);
+    };
+
+    const handleEditPrompt = (prompt: Prompt) => {
+        setEditingPrompt(prompt);
+        setIsEditorOpen(true);
     };
 
     return (
@@ -234,16 +235,16 @@ const PromptList: React.FC<PromptListProps> = ({ prompts, selectedFolderName, on
                                         <PromptCard 
                                             key={prompt.id} 
                                             prompt={prompt} 
-                                            onDoubleClick={() => onEditPrompt(prompt)}
+                                            onDoubleClick={() => handleEditPrompt(prompt)}
                                             onDragStart={(e) => {
                                                 setIsDragging(true);
                                                 e.dataTransfer.setData('application/prompt-id', prompt.id);
                                             }}
                                             onDragEnd={() => setIsDragging(false)}
-                                            onMoveToTrash={() => onMoveToTrash(prompt.id)}
-                                            onDeletePermanently={() => onDeletePermanently(prompt.id)}
-                                            onToggleFavorite={() => onToggleFavorite(prompt.id)}
-                                            onMove={onMovePrompt}
+                                            onMoveToTrash={() => movePromptToTrash(prompt.id)}
+                                            onDeletePermanently={() => deletePrompt(prompt.id)}
+                                            onToggleFavorite={() => toggleFavorite(prompt.id)}
+                                            onMove={movePrompt}
                                             folders={folders}
                                         />
                                     ))}
@@ -262,12 +263,12 @@ const PromptList: React.FC<PromptListProps> = ({ prompts, selectedFolderName, on
                            <PromptCard 
                                 key={prompt.id} 
                                 prompt={prompt} 
-                                onDoubleClick={() => onEditPrompt(prompt)}
+                                onDoubleClick={() => handleEditPrompt(prompt)}
                                 onDragStart={(e) => e.dataTransfer.setData('application/prompt-id', prompt.id)}
-                                onMoveToTrash={() => onMoveToTrash(prompt.id)}
-                                onDeletePermanently={() => onDeletePermanently(prompt.id)}
-                                onToggleFavorite={() => onToggleFavorite(prompt.id)}
-                                onMove={onMovePrompt}
+                                onMoveToTrash={() => movePromptToTrash(prompt.id)}
+                                onDeletePermanently={() => deletePrompt(prompt.id)}
+                                onToggleFavorite={() => toggleFavorite(prompt.id)}
+                                onMove={movePrompt}
                                 folders={folders}
                             />
                         ))}

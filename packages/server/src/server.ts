@@ -1,388 +1,55 @@
-import express from 'express';
-import cors from 'cors';
-import 'dotenv/config';
-import { Pool, QueryResult } from 'pg';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
-import { suggestTags, refinePrompt, suggestTitle } from './services/serverAiService.js';
-import crypto from 'crypto';
+import express from "express";
+import cors from "cors";
+import "dotenv/config";
+import path from "path";
+import { fileURLToPath } from "url";
+import { initDb } from "./initDb.js";
+import authRoutes from "./routes/authRoutes.js";
+import folderRoutes from "./routes/folderRoutes.js";
+import promptRoutes from "./routes/promptRoutes.js";
+import tagRoutes from "./routes/tagRoutes.js";
+import aiRoutes from "./routes/aiRoutes.js";
 
 // For resolving __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-
-
-// Default user credentials (in a real app, this would be stored securely)
-const DEFAULT_USERNAME = 'evertan';
-const DEFAULT_PASSWORD = '1234abcd';
-
-// Authentication middleware
-const authenticateToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
-
-    if (!token) {
-        return res.status(401).json({ error: 'Access token required' });
-    }
-
-    // For this implementation, we'll verify the token matches the expected pattern
-    // In a real app, this would validate against a database of tokens
-    try {
-        const decoded = Buffer.from(token, 'base64').toString('utf-8');
-        const [username, password] = decoded.split(':');
-        
-        if (username === DEFAULT_USERNAME && password === DEFAULT_PASSWORD) {
-            (req as any).user = { username };
-            next();
-        } else {
-            res.status(403).json({ error: 'Invalid token' });
-        }
-    } catch (error) {
-        res.status(403).json({ error: 'Invalid token' });
-    }
-};
-
 async function main() {
-    const app = express();
-    const port = parseInt(process.env.PORT || '3001');
+  const app = express();
+  const port = parseInt(process.env.PORT || "3001");
 
-    const pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
-    });
+  // Initialize database schema
+  await initDb();
 
-    console.log('Database pool initialized successfully.');
+  app.use(cors());
+  app.use(express.json());
 
-    // Migration logic
-    const migrate = async () => {
-        // Check for is_system column in folders table
-        const folderInfo = await pool.query(`
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name='folders' AND column_name='is_system'
-        `);
-        if (folderInfo.rowCount === 0) {
-            await pool.query('ALTER TABLE folders ADD COLUMN is_system INTEGER DEFAULT 0');
-        }
+  // Routes
+  app.use("/api/auth", authRoutes);
+  app.use("/api/folders", folderRoutes);
+  app.use("/api/prompts", promptRoutes);
+  app.use("/api/tags", tagRoutes);
+  app.use("/api/ai", aiRoutes);
 
-        // Check for deleted_at column in prompts table
-        const promptInfo = await pool.query(`
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name='prompts' AND column_name='deleted_at'
-        `);
-        if (promptInfo.rowCount === 0) {
-            await pool.query('ALTER TABLE prompts ADD COLUMN deleted_at TIMESTAMP');
-        }
-    };
+  // Health check endpoint for Render - keep it on a specific path
+  app.get("/health", (req, res) => {
+    res.json({ status: "OK", message: "PromptsCraft server is running" });
+  });
 
-    await pool.query(`CREATE TABLE IF NOT EXISTS folders (id SERIAL PRIMARY KEY, name TEXT, parent_id INTEGER, sort_order INTEGER, is_system INTEGER DEFAULT 0)`);
-    await pool.query(`CREATE TABLE IF NOT EXISTS prompts (id SERIAL PRIMARY KEY, title TEXT, prompt TEXT, tags TEXT, folder_id INTEGER, is_favorite INTEGER, deleted_at TIMESTAMP)`);
-
-    await migrate();
-
-    const trashFolderRes: QueryResult = await pool.query('SELECT * FROM folders WHERE is_system = 1 AND name = $1', ['Trash']);
-    if (trashFolderRes.rowCount === 0) {
-        await pool.query('INSERT INTO folders (name, is_system, sort_order) VALUES ($1, $2, $3)', ['Trash', 1, 9999]);
-    }
-
-    app.use(cors());
-    app.use(express.json());
-
-    // Serve static files from the React app build directory
-    app.use(express.static(path.join(__dirname, 'public')));
-
-    app.get('/api/folders', authenticateToken, async (req, res) => {
-        const { rows } = await pool.query('SELECT * FROM folders WHERE is_system = 0 ORDER BY sort_order');
-        res.json(rows);
-    });
-
-    app.get('/api/trash-folder', authenticateToken, async (req, res) => {
-        const { rows } = await pool.query('SELECT * FROM folders WHERE is_system = 1 AND name = $1', ['Trash']);
-        res.json(rows[0]);
-    });
-
-    app.post('/api/folders', authenticateToken, async (req, res) => {
-        const { name, parent_id } = req.body;
-
-        if (parent_id) {
-            const parentFolderRes: QueryResult = await pool.query('SELECT * FROM folders WHERE id = $1', [parent_id]);
-            if (parentFolderRes.rowCount !== null && parentFolderRes.rowCount > 0 && parentFolderRes.rows[0].is_system) {
-                return res.status(403).json({ error: 'Cannot create subfolders in a system folder.' });
-            }
-        }
-
-        let maxOrderRes;
-        if (parent_id === null) {
-            maxOrderRes = await pool.query('SELECT MAX(sort_order) as max FROM folders WHERE parent_id IS NULL');
-        } else {
-            maxOrderRes = await pool.query('SELECT MAX(sort_order) as max FROM folders WHERE parent_id = $1', [parent_id]);
-        }
-        const sort_order = (maxOrderRes.rows[0].max || 0) + 1;
-        const result = await pool.query('INSERT INTO folders (name, parent_id, sort_order) VALUES ($1, $2, $3) RETURNING id', [name, parent_id, sort_order]);
-        res.json({ id: result.rows[0].id, name, parent_id, sort_order });
-    });
-
-    app.put('/api/folders/:id', authenticateToken, async (req, res) => {
-        const folderRes: QueryResult = await pool.query('SELECT * FROM folders WHERE id = $1', [req.params.id]);
-        if (folderRes.rowCount !== null && folderRes.rowCount > 0 && folderRes.rows[0].is_system) {
-            return res.status(403).json({ error: 'System folders cannot be modified.' });
-        }
-        const { name } = req.body;
-        await pool.query('UPDATE folders SET name = $1 WHERE id = $2', [name, req.params.id]);
-        res.json({ id: req.params.id, name });
-    });
-
-    app.delete('/api/folders/:id', authenticateToken, async (req, res) => {
-        const trashFolderRes: QueryResult = await pool.query('SELECT id FROM folders WHERE is_system = 1 AND name = $1', ['Trash']);
-        if (trashFolderRes.rowCount !== null && trashFolderRes.rowCount === 0) {
-            return res.status(500).json({ error: 'Trash folder not found' });
-        }
-        await pool.query('UPDATE prompts SET folder_id = $1 WHERE folder_id = $2', [trashFolderRes.rows[0].id, req.params.id]);
-        await pool.query('DELETE FROM folders WHERE id = $1', [req.params.id]);
-        res.json({ message: 'deleted' });
-    });
-
-    app.put('/api/folders/:id/reorder', authenticateToken, async (req, res) => {
-        const { direction } = req.body; // 'up' or 'down'
-        const folderId = Number(req.params.id);
-
-        try {
-            await pool.query('BEGIN');
-
-            const folderRes: QueryResult = await pool.query('SELECT * FROM folders WHERE id = $1', [folderId]);
-            if (folderRes.rowCount === 0) {
-                await pool.query('ROLLBACK');
-                return res.status(404).json({ error: 'Folder not found' });
-            }
-            const folder = folderRes.rows[0];
-
-            let otherFolderRes: QueryResult;
-            if (folder.parent_id === null) {
-                if (direction === 'up') {
-                    otherFolderRes = await pool.query(
-                        'SELECT * FROM folders WHERE parent_id IS NULL AND sort_order < $1 ORDER BY sort_order DESC LIMIT 1',
-                        [folder.sort_order]
-                    );
-                } else { // down
-                    otherFolderRes = await pool.query(
-                        'SELECT * FROM folders WHERE parent_id IS NULL AND sort_order > $1 ORDER BY sort_order ASC LIMIT 1',
-                        [folder.sort_order]
-                    );
-                }
-            } else {
-                if (direction === 'up') {
-                    otherFolderRes = await pool.query(
-                        'SELECT * FROM folders WHERE parent_id = $1 AND sort_order < $2 ORDER BY sort_order DESC LIMIT 1',
-                        [folder.parent_id, folder.sort_order]
-                    );
-                } else { // down
-                    otherFolderRes = await pool.query(
-                        'SELECT * FROM folders WHERE parent_id = $1 AND sort_order > $2 ORDER BY sort_order ASC LIMIT 1',
-                        [folder.parent_id, folder.sort_order]
-                    );
-                }
-            }
-            
-            if (otherFolderRes.rowCount !== null && otherFolderRes.rowCount > 0) {
-                const otherFolder = otherFolderRes.rows[0];
-                await pool.query('UPDATE folders SET sort_order = $1 WHERE id = $2', [otherFolder.sort_order, folder.id]);
-                await pool.query('UPDATE folders SET sort_order = $1 WHERE id = $2', [folder.sort_order, otherFolder.id]);
-            }
-
-            if (otherFolderRes && otherFolderRes.rowCount !== null && otherFolderRes.rowCount > 0) {
-                const otherFolder = otherFolderRes.rows[0];
-                await pool.query('UPDATE folders SET sort_order = $1 WHERE id = $2', [otherFolder.sort_order, folder.id]);
-                await pool.query('UPDATE folders SET sort_order = $1 WHERE id = $2', [folder.sort_order, otherFolder.id]);
-            }
-
-            await pool.query('COMMIT');
-            res.json({ message: 'reordered' });
-        } catch (error) {
-            await pool.query('ROLLBACK');
-            res.status(500).json({ error: 'Failed to reorder folder' });
-        }
-    });
-
-    app.put('/api/folders/:id/move', authenticateToken, async (req, res) => {
-        const folderId = Number(req.params.id);
-        const folderRes: QueryResult = await pool.query('SELECT * FROM folders WHERE id = $1', [folderId]);
-        if (folderRes.rowCount !== null && folderRes.rowCount > 0 && folderRes.rows[0].is_system) {
-            return res.status(403).json({ error: 'System folders cannot be moved.' });
-        }
-
-        const { parent_id } = req.body;
-
-        if (folderId === Number(parent_id)) {
-            return res.status(400).json({ error: "A folder cannot be moved into itself." });
-        }
-
-        if (parent_id !== null) {
-            const sql = `
-                WITH RECURSIVE subfolders(id) AS (
-                    SELECT ::integer AS id
-                    UNION ALL
-                    SELECT f.id FROM folders f JOIN subfolders s ON f.parent_id = s.id
-                )
-                SELECT id FROM subfolders;
-            `;
-            const descendantsRes = await pool.query(sql, [folderId]);
-            const descendantIds = descendantsRes.rows.map(d => d.id);
-
-            if (descendantIds.includes(Number(parent_id))) {
-                return res.status(400).json({ error: "A folder cannot be moved into its own subfolder." });
-            }
-        }
-
-        await pool.query('UPDATE folders SET parent_id = $1 WHERE id = $2', [parent_id, folderId]);
-        res.json({ message: 'moved' });
-    });
-
-    app.get('/api/folders/:id/prompts', authenticateToken, async (req, res) => {
-        try {
-            const folderId = req.params.id;
-            const sql = `
-                WITH RECURSIVE subfolders(id) AS (
-                    SELECT $1::integer AS id
-                    UNION ALL
-                    SELECT f.id FROM folders f JOIN subfolders s ON f.parent_id = s.id
-                )
-                SELECT p.* FROM prompts p JOIN subfolders sf ON p.folder_id = sf.id;
-            `;
-            const { rows } = await pool.query(sql, [folderId]);
-            res.json(rows.map((prompt: any) => ({
-                ...prompt,
-                tags: typeof prompt.tags === 'string' ? JSON.parse(prompt.tags) : prompt.tags,
-                is_favorite: !!prompt.is_favorite,
-            })));
-        } catch (err) {
-            res.status(400).json({"error": (err as Error).message});
-        }
-    });
-
-    app.get('/api/prompts', authenticateToken, async (req, res) => {
-        const { folderId } = req.query;
-        let promptsRes;
-        if (folderId) {
-            promptsRes = await pool.query('SELECT * FROM prompts WHERE folder_id = $1', [folderId]);
-        } else {
-            promptsRes = await pool.query('SELECT * FROM prompts');
-        }
-        res.json(promptsRes.rows);
-    });
-
-    app.get('/api/prompts/:id', authenticateToken, async (req, res) => {
-        const { rows } = await pool.query('SELECT * FROM prompts WHERE id = $1', [req.params.id]);
-        res.json(rows[0]);
-    });
-
-    app.post('/api/prompts', authenticateToken, async (req, res) => {
-        const { title, prompt, tags, folder_id } = req.body;
-        const result = await pool.query('INSERT INTO prompts (title, prompt, tags, folder_id) VALUES ($1, $2, $3, $4) RETURNING id', [title, prompt, JSON.stringify(tags), folder_id]);
-        res.json({ id: result.rows[0].id, ...req.body });
-    });
-
-    app.put('/api/prompts/:id', authenticateToken, async (req, res) => {
-        const { title, prompt, tags, folder_id } = req.body;
-        const result = await pool.query('UPDATE prompts SET title = $1, prompt = $2, tags = $3, folder_id = $4 WHERE id = $5 RETURNING *', [title, prompt, JSON.stringify(tags), folder_id, req.params.id]);
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Prompt not found' });
-        }
-        res.json(result.rows[0]);
-    });
-
-    app.put('/api/prompts/:id/favorite', authenticateToken, async (req, res) => {
-        const { is_favorite } = req.body;
-        await pool.query('UPDATE prompts SET is_favorite = $1 WHERE id = $2', [is_favorite, req.params.id]);
-        res.json({ message: 'updated' });
-    });
-
-    app.put('/api/prompts/:id/move-to-trash', authenticateToken, async (req, res) => {
-        const trashFolderRes: QueryResult = await pool.query('SELECT id FROM folders WHERE is_system = 1 AND name = $1', ['Trash']);
-        if (trashFolderRes.rowCount === 0) {
-            return res.status(500).json({ error: 'Trash folder not found' });
-        }
-        await pool.query('UPDATE prompts SET folder_id = $1 WHERE id = $2', [trashFolderRes.rows[0].id, req.params.id]);
-        res.json({ message: 'moved to trash' });
-    });
-
-    app.delete('/api/prompts/:id', authenticateToken, async (req, res) => {
-        const result = await pool.query('DELETE FROM prompts WHERE id = $1', [req.params.id]);
-        if (result.rowCount === 0) {
-            return res.status(404).json({ error: 'Prompt not found' });
-        }
-        res.json({ message: 'deleted' });
-    });
-
-    app.get('/api/tags/top', authenticateToken, async (req, res) => {
-        const { rows } = await pool.query('SELECT tags FROM prompts');
-        const tagCounts = new Map();
-        rows.forEach((row: any) => {
-            try {
-                const tags = JSON.parse(row.tags);
-                if (Array.isArray(tags)) {
-                    tags.forEach(tag => {
-                        tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
-                    });
-                }
-            } catch (e) {}
-        });
-        const sortedTags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 15).map(entry => entry[0]);
-        res.json(sortedTags);
-    });
-
-    app.post('/api/ai/suggest-tags', authenticateToken, async (req, res) => {
-        try {
-            const { promptContent, selectedModel } = req.body;
-            const tags = await suggestTags(promptContent, selectedModel);
-            res.json({ suggestedTags: tags });
-        } catch (error) {
-            res.status(500).json({ error: 'Failed to get AI tag suggestions.', details: (error as Error).message });
-        }
-    });
-
-    app.post('/api/ai/refine-prompt', authenticateToken, async (req, res) => {
-        try {
-            const { promptContent, selectedModel, persona, task, context, format, max_tokens } = req.body;
-            const refined = await refinePrompt(promptContent, selectedModel, { persona, task, context, format, max_tokens });
-            res.json({ refinedPrompt: refined });
-        } catch (error) {
-            res.status(500).json({ error: 'Failed to refine prompt.', details: (error as Error).message });
-        }
-    });
-
-    app.post('/api/ai/suggest-title', authenticateToken, async (req, res) => {
-        try {
-            const { promptContent, selectedModel } = req.body;
-            const title = await suggestTitle(promptContent, selectedModel);
-            res.json({ suggestedTitle: title });
-        } catch (error) {
-            res.status(500).json({ error: 'Failed to suggest title.', details: (error as Error).message });
-        }
-    });
-
-    // Health check endpoint for Render - keep it on a specific path
-    app.get('/health', (req, res) => {
-        res.json({ status: 'OK', message: 'PromptsCraft server is running' });
-    });
+  // Serve static files from the React app build directory (production only)
+  if (process.env.NODE_ENV === "production") {
+    app.use(express.static(path.join(__dirname, "public")));
 
     // Serve React app for any non-API routes
     app.get(/^(?!\/api\/).*$/, (req, res) => {
-        const indexPath = path.join(__dirname, 'public', 'index.html');
-        
-        // Check if the file exists before trying to send it
-        if (fs.existsSync(indexPath)) {
-            res.sendFile(indexPath);
-        } else {
-            console.error('React app build not found at:', indexPath);
-            res.status(500).send('Frontend not built yet - please wait for deployment to complete or contact the administrator');
-        }
+      const indexPath = path.join(__dirname, "public", "index.html");
+      res.sendFile(indexPath);
     });
+  }
 
-    app.listen(port, () => {
-        console.log(`Server is running on http://localhost:${port}`);
-    });
+  app.listen(port, () => {
+    console.log(`Server is running on http://localhost:${port}`);
+  });
 }
 
 main();

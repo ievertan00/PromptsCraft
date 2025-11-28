@@ -1,16 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import type { Prompt, Folder } from '../types';
+import type { Prompt, Folder } from 'shared/types';
 import { suggestTags, refinePrompt, suggestTitle, SupportedModel } from '../services/aiService';
 import { SparklesIcon } from './icons/SparklesIcon';
 import TagInput from './TagInput';
 import { XIcon } from './icons/XIcon';
 import { ClipboardIcon } from './icons/ClipboardIcon';
+import { usePrompts } from '../contexts/PromptContext';
 
 interface PromptEditorProps {
-    prompt: Prompt;
-    folders: Folder[];
-    onSave: (prompt: Prompt) => void;
-    onClose: () => void;
     selectedModel: SupportedModel;
 }
 
@@ -29,8 +26,9 @@ const AiSuggestion: React.FC<{ title: string; children: React.ReactNode; onAccep
 );
 
 
-const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, folders, onSave, onClose, selectedModel }) => {
-    const [prompt, setPrompt] = useState<Prompt>(initialPrompt);
+const PromptEditor: React.FC<PromptEditorProps> = ({ selectedModel }) => {
+    const { editingPrompt, savePrompt, setIsEditorOpen } = usePrompts();
+    const [prompt, setPrompt] = useState<Prompt | null>(null);
     const [isAiLoading, setIsAiLoading] = useState(false);
     const [isGeneratingTitleAndTags, setIsGeneratingTitleAndTags] = useState(false);
     const [isRefiningPrompt, setIsRefiningPrompt] = useState(false);
@@ -40,70 +38,48 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
     const initialFetchDone = useRef(false);
     const [isCopied, setIsCopied] = useState(false);
 
-    const handleCopy = () => {
-        navigator.clipboard.writeText(prompt.prompt).then(() => {
-            setIsCopied(true);
-            setTimeout(() => setIsCopied(false), 2000);
-        });
-    };
-
     useEffect(() => {
-        setPrompt(initialPrompt);
-        // Reset states when a new prompt is loaded into the editor
-        setAiSuggestedTags(null);
-        setSuggestedTitle(null);
-        setRefinedPrompt(null);
-        initialFetchDone.current = false;
-    }, [initialPrompt]);
+        if (editingPrompt) {
+            setPrompt(editingPrompt);
+        }
+    }, [editingPrompt]);
+
+    const handleCopy = () => {
+        if (prompt) {
+            navigator.clipboard.writeText(prompt.prompt).then(() => {
+                setIsCopied(true);
+                setTimeout(() => setIsCopied(false), 2000);
+            });
+        }
+    };
 
     // Handle Escape key press to close modal
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
-                onClose();
+                setIsEditorOpen(false);
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
         };
-    }, [onClose]);
+    }, [setIsEditorOpen]);
 
     const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        setPrompt({ ...prompt, prompt: e.target.value });
+        if (prompt) setPrompt({ ...prompt, prompt: e.target.value });
     };
 
     const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setPrompt({ ...prompt, title: e.target.value });
+        if (prompt) setPrompt({ ...prompt, title: e.target.value });
     };
 
     const handleTagsChange = (newTags: string[]) => {
-        setPrompt({ ...prompt, tags: newTags });
-    };
-
-
-
-    
-
-
-
-    const getFolderPath = (folderId: string): string => {
-        const findPath = (items: Folder[], id: string, currentPath: string = ''): string | null => {
-            for (const item of items) {
-                const path = currentPath ? `${currentPath} / ${item.name}` : item.name;
-                if (item.id === id) return path;
-                if (item.children) {
-                    const found = findPath(item.children, id, path);
-                    if (found) return found;
-                }
-            }
-            return null;
-        }
-        return findPath(folders, folderId) || "Unknown Folder";
+        if (prompt) setPrompt({ ...prompt, tags: newTags });
     };
 
     const handleRefinePrompt = async () => {
-        if (!prompt.prompt) return;
+        if (!prompt || !prompt.prompt) return;
         setIsRefiningPrompt(true);
         setIsAiLoading(true);
         try {
@@ -124,7 +100,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
     };
 
     const handleSuggestTitleAndTags = async () => {
-        if (!prompt.prompt || prompt.prompt.length < 50) return;
+        if (!prompt || !prompt.prompt || prompt.prompt.length < 50) return;
         setIsGeneratingTitleAndTags(true);
         setIsAiLoading(true);
         try {
@@ -143,6 +119,8 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
             setIsAiLoading(false);
         }
     };
+
+    if (!prompt) return null;
 
     return (
         <div 
@@ -165,13 +143,13 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
                     <div className="flex items-center gap-4 ml-4">
 
                         <button 
-                            onClick={() => onSave(prompt)}
+                            onClick={() => savePrompt(prompt)}
                             className="px-4 py-2 bg-transparent border-2 border-theme-primary text-theme-primary rounded-md font-semibold transition-colors hover:bg-theme-primary hover:text-white disabled:border-theme-default disabled:text-theme-secondary disabled:cursor-not-allowed text-sm"
                             disabled={!prompt.title || !prompt.prompt}
                         >
                             Save Prompt
                         </button>
-                        <button onClick={onClose} className="p-2 text-theme-secondary rounded-full hover:bg-theme-tertiary hover:text-theme-default">
+                        <button onClick={() => setIsEditorOpen(false)} className="p-2 text-theme-secondary rounded-full hover:bg-theme-tertiary hover:text-theme-default">
                             <XIcon className="w-6 h-6" />
                         </button>
                     </div>
@@ -182,7 +160,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
                         <AiSuggestion
                             title="AI Title Suggestion"
                             onAccept={() => {
-                                setPrompt(p => ({ ...p, title: suggestedTitle }));
+                                setPrompt(p => p ? ({ ...p, title: suggestedTitle }) : null);
                                 setSuggestedTitle(null);
                             }}
                             onDismiss={() => setSuggestedTitle(null)}
@@ -195,7 +173,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
                         <AiSuggestion
                             title="AI Tag Suggestions"
                             onAccept={() => {
-                                setPrompt(p => ({ ...p, tags: [...new Set([...p.tags, ...aiSuggestedTags])] }));
+                                setPrompt(p => p ? ({ ...p, tags: [...new Set([...p.tags, ...aiSuggestedTags])] }) : null);
                                 setAiSuggestedTags(null);
                             }}
                             onDismiss={() => setAiSuggestedTags(null)}
@@ -237,24 +215,24 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
                         <div className="flex items-center gap-4 mb-2 text-sm text-theme-secondary">
                             <h4 className="font-medium">Refinement Settings:</h4>
                             <label className="flex items-center gap-1.5 cursor-pointer">
-                                <input type="checkbox" checked={prompt.persona ?? true} onChange={e => setPrompt({...prompt, persona: e.target.checked})} className="form-checkbox h-4 w-4 text-theme-primary bg-theme-default border-theme-primary-light rounded focus:ring-theme-primary" />
+                                <input type="checkbox" checked={prompt.persona ?? true} onChange={e => setPrompt(p => p ? ({...p, persona: e.target.checked}) : null)} className="form-checkbox h-4 w-4 text-theme-primary bg-theme-default border-theme-primary-light rounded focus:ring-theme-primary" />
                                 Persona
                             </label>
                             <label className="flex items-center gap-1.5 cursor-pointer">
-                                <input type="checkbox" checked={prompt.task ?? true} onChange={e => setPrompt({...prompt, task: e.target.checked})} className="form-checkbox h-4 w-4 text-theme-primary bg-theme-default border-theme-primary-light rounded focus:ring-theme-primary" />
+                                <input type="checkbox" checked={prompt.task ?? true} onChange={e => setPrompt(p => p ? ({...p, task: e.target.checked}) : null)} className="form-checkbox h-4 w-4 text-theme-primary bg-theme-default border-theme-primary-light rounded focus:ring-theme-primary" />
                                 Task
                             </label>
                             <label className="flex items-center gap-1.5 cursor-pointer">
-                                <input type="checkbox" checked={prompt.context ?? true} onChange={e => setPrompt({...prompt, context: e.target.checked})} className="form-checkbox h-4 w-4 text-theme-primary bg-theme-default border-theme-primary-light rounded focus:ring-theme-primary" />
+                                <input type="checkbox" checked={prompt.context ?? true} onChange={e => setPrompt(p => p ? ({...p, context: e.target.checked}) : null)} className="form-checkbox h-4 w-4 text-theme-primary bg-theme-default border-theme-primary-light rounded focus:ring-theme-primary" />
                                 Context
                             </label>
                             <label className="flex items-center gap-1.5 cursor-pointer">
-                                <input type="checkbox" checked={prompt.format ?? true} onChange={e => setPrompt({...prompt, format: e.target.checked})} className="form-checkbox h-4 w-4 text-theme-primary bg-theme-default border-theme-primary-light rounded focus:ring-theme-primary" />
+                                <input type="checkbox" checked={prompt.format ?? true} onChange={e => setPrompt(p => p ? ({...p, format: e.target.checked}) : null)} className="form-checkbox h-4 w-4 text-theme-primary bg-theme-default border-theme-primary-light rounded focus:ring-theme-primary" />
                                 Format
                             </label>
                             <label className="flex items-center gap-1.5 cursor-pointer">
                                 Max Tokens:
-                                <input type="number" value={prompt.max_tokens ?? 512} onChange={e => setPrompt({...prompt, max_tokens: parseInt(e.target.value, 10)})} className="w-20 bg-theme-default border border-theme-primary-light rounded px-2 py-0.5 focus:ring-theme-primary focus:outline-none" />
+                                <input type="number" value={prompt.max_tokens ?? 512} onChange={e => setPrompt(p => p ? ({...p, max_tokens: parseInt(e.target.value, 10)}) : null)} className="w-20 bg-theme-default border border-theme-primary-light rounded px-2 py-0.5 focus:ring-theme-primary focus:outline-none" />
                             </label>
                         </div>
 
@@ -275,7 +253,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({ prompt: initialPrompt, fold
                                     <div className="w-full h-full p-4 bg-theme-default rounded-md border border-theme-primary-light/50 relative overflow-y-auto">
                                         <p className="whitespace-pre-wrap text-sm">{refinedPrompt}</p>
                                         <div className="absolute bottom-4 right-4 flex gap-2">
-                                            <button onClick={() => { setPrompt(p => ({...p, prompt: refinedPrompt})); setRefinedPrompt(null); }} className="px-3 py-1 bg-theme-primary hover:bg-theme-primary-hover text-white rounded text-xs font-semibold">Use this version</button>
+                                            <button onClick={() => { setPrompt(p => p ? ({...p, prompt: refinedPrompt}) : null); setRefinedPrompt(null); }} className="px-3 py-1 bg-theme-primary hover:bg-theme-primary-hover text-white rounded text-xs font-semibold">Use this version</button>
                                             <button onClick={() => setRefinedPrompt(null)} className="px-3 py-1 bg-theme-tertiary hover:bg-theme-default rounded text-xs">Dismiss</button>
                                         </div>
                                     </div>

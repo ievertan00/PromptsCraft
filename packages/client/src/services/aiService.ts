@@ -1,52 +1,19 @@
 import { SupportedModel } from '../types';
-import { getAuthHeaders } from './api';
+import { api } from './api';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/ai';
+const API_BASE_URL = '/ai';
 
 export const suggestTags = async (promptContent: string, selectedModel: SupportedModel): Promise<string[]> => {
-    const response = await fetch(`${API_BASE_URL}/suggest-tags`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ promptContent, selectedModel }),
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to get AI tag suggestions.');
-    }
-
-    const data = await response.json();
-    return data.suggestedTags;
+    const response = await api.post(`${API_BASE_URL}/suggest-tags`, { promptContent, selectedModel });
+    return response.data.suggestedTags;
 };
 
 export const refinePrompt = async (promptContent: string, selectedModel: SupportedModel, options: { persona?: boolean; task?: boolean; context?: boolean; format?: boolean; max_tokens?: number }): Promise<string> => {
-    const response = await fetch(`${API_BASE_URL}/refine-prompt`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ promptContent, selectedModel, ...options }),
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to refine prompt.');
-    }
-
-    const data = await response.json();
-    return data.refinedPrompt;
+    const response = await api.post(`${API_BASE_URL}/refine-prompt`, { promptContent, selectedModel, ...options });
+    return response.data.refinedPrompt;
 };
 
 export const suggestTitle = async (promptContent: string, selectedModel: SupportedModel): Promise<string> => {
-    const response = await fetch(`${API_BASE_URL}/suggest-title`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ promptContent, selectedModel }),
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to suggest title.');
-    }
-
-    const data = await response.json();
-    return data.suggestedTitle;
+    const response = await api.post(`${API_BASE_URL}/suggest-title`, { promptContent, selectedModel });
+    return response.data.suggestedTitle;
 };

@@ -8,19 +8,11 @@ import { DeleteIcon } from './icons/DeleteIcon';
 import { ArrowUpIcon } from './icons/ArrowUpIcon';
 import { ArrowDownIcon } from './icons/ArrowDownIcon';
 import ConfirmModal from './ConfirmModal';
+import { useFolders } from '../contexts/FolderContext';
 
 interface FolderTreeProps {
-    folders: Folder[];
-    selectedFolderId: string | null;
-    onSelectFolder: (folderId: string | null) => void;
-    onRenameFolder: (folderId: string, newName: string) => void;
-    onDeleteFolder: (folderId: string) => void;
-    onMoveFolder: (folderId: string, newParentId: string | null) => void;
     onMovePrompt: (promptId: string, newFolderId: string) => void;
-    onMoveUp: (folderId: string) => void;
-    onMoveDown: (folderId: string) => void;
     newFolderParentId?: string | null;
-    onCreateFolder: (name: string, parentId: string | null) => void;
     onCancelNewFolder: () => void;
     onNewFolderRequest: (parentId: string | null) => void;
     isDragging: boolean;
@@ -30,9 +22,9 @@ interface FolderTreeProps {
 const NewFolderInput: React.FC<{
     parentId: string | null;
     level: number;
-    onCreate: (name: string, parentId: string | null) => void;
     onCancel: () => void;
-}> = ({ parentId, level, onCreate, onCancel }) => {
+}> = ({ parentId, level, onCancel }) => {
+    const { createFolder } = useFolders();
     const [name, setName] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -43,7 +35,7 @@ const NewFolderInput: React.FC<{
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
             if (name.trim()) {
-                onCreate(name.trim(), parentId);
+                createFolder(name.trim(), parentId);
             } else {
                 onCancel();
             }
@@ -79,20 +71,24 @@ const NewFolderInput: React.FC<{
 
 const FolderItem: React.FC<{
     folder: Folder;
-    selectedFolderId: string | null;
-    onSelectFolder: (folderId: string | null) => void;
-    onRenameFolder: (folderId: string, newName: string) => void;
-    onDeleteFolder: (folderId: string) => void;
-    onMoveFolder: (folderId: string, newParentId: string | null) => void;
-    onMovePrompt: (promptId: string, newFolderId: string) => void;
-    onMoveUp: (folderId: string) => void;
-    onMoveDown: (folderId: string) => void;
     level: number;
+    onMovePrompt: (promptId: string, newFolderId: string) => void;
     newFolderParentId?: string | null;
-    onCreateFolder: (name: string, parentId: string | null) => void;
     onCancelNewFolder: () => void;
     onNewFolderRequest: (parentId: string | null) => void;
-}> = ({ folder, selectedFolderId, onSelectFolder, onRenameFolder, onDeleteFolder, onMoveFolder, onMovePrompt, onMoveUp, onMoveDown, level, ...props }) => {
+    isDragging: boolean;
+    setIsDragging: (isDragging: boolean) => void;
+}> = ({ folder, level, onMovePrompt, newFolderParentId, onCancelNewFolder, onNewFolderRequest, isDragging, setIsDragging }) => {
+    const { 
+        selectedFolderId, 
+        setSelectedFolderId, 
+        renameFolder, 
+        deleteFolder, 
+        moveFolder, 
+        moveFolderUp, 
+        moveFolderDown 
+    } = useFolders();
+
     const [isOpen, setIsOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editingName, setEditingName] = useState(folder.name);
@@ -105,10 +101,10 @@ const FolderItem: React.FC<{
     const isSelected = selectedFolderId === folder.id;
 
     useEffect(() => {
-        if (props.newFolderParentId === folder.id && !isOpen) {
+        if (newFolderParentId === folder.id && !isOpen) {
             setIsOpen(true);
         }
-    }, [props.newFolderParentId, folder.id, isOpen]);
+    }, [newFolderParentId, folder.id, isOpen]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -133,13 +129,13 @@ const FolderItem: React.FC<{
     };
     
     const handleSelect = () => {
-        onSelectFolder(folder.id);
+        setSelectedFolderId(folder.id);
         setIsEditing(false);
     };
 
     const handleRename = () => {
         if (editingName.trim() && editingName.trim() !== folder.name) {
-            onRenameFolder(folder.id, editingName.trim());
+            renameFolder(folder.id, editingName.trim());
         }
         setIsEditing(false);
     };
@@ -153,13 +149,13 @@ const FolderItem: React.FC<{
     };
     
     const handleDragStart = (e: React.DragEvent) => {
-        props.setIsDragging(true);
+        setIsDragging(true);
         e.dataTransfer.setData('application/folder-id', folder.id);
         e.dataTransfer.effectAllowed = 'move';
     };
 
     const handleDragEnd = () => {
-        props.setIsDragging(false);
+        setIsDragging(false);
     };
     
     const handleDrop = (e: React.DragEvent) => {
@@ -175,7 +171,7 @@ const FolderItem: React.FC<{
 
         const droppedFolderId = e.dataTransfer.getData('application/folder-id');
         if (droppedFolderId && droppedFolderId !== folder.id) {
-            onMoveFolder(droppedFolderId, folder.id);
+            moveFolder(droppedFolderId, folder.id);
         }
     };
 
@@ -204,7 +200,7 @@ const FolderItem: React.FC<{
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
-                className={`${props.isDragging ? '' : 'group'} flex items-center p-2 rounded-md cursor-pointer transition-colors relative ${
+                className={`${isDragging ? '' : 'group'} flex items-center p-2 rounded-md cursor-pointer transition-colors relative ${
                     isSelected ? 'bg-indigo-600/30 text-white' : 'hover:bg-gray-800 text-theme-secondary'
                 } ${isDragOver ? 'ring-2 ring-indigo-500 ring-inset' : ''}`}
                 style={{ paddingLeft: `${level * 16 + 8}px` }}
@@ -244,10 +240,10 @@ const FolderItem: React.FC<{
                     </button>
                     {menuOpen && (
                         <div ref={menuRef} className="absolute z-10 right-0 mt-2 w-40 bg-gray-700 border border-gray-600 rounded-md shadow-lg py-1">
-                           <a onClick={(e) => { e.stopPropagation(); props.onNewFolderRequest(folder.id); setMenuOpen(false); }} className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-600 cursor-pointer"><PlusIcon className="w-4 h-4 flex-shrink-0" /> New Subfolder</a>
+                           <a onClick={(e) => { e.stopPropagation(); onNewFolderRequest(folder.id); setMenuOpen(false); }} className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-600 cursor-pointer"><PlusIcon className="w-4 h-4 flex-shrink-0" /> New Subfolder</a>
                            <a onClick={(e) => { e.stopPropagation(); setIsEditing(true); setMenuOpen(false); }} className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-600 cursor-pointer"><EditIcon className="w-4 h-4 flex-shrink-0" /> Rename</a>
-                           <a onClick={(e) => { e.stopPropagation(); onMoveUp(folder.id); setMenuOpen(false); }} className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-600 cursor-pointer"><ArrowUpIcon className="w-4 h-4 flex-shrink-0" /> Move Up</a>
-                           <a onClick={(e) => { e.stopPropagation(); onMoveDown(folder.id); setMenuOpen(false); }} className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-600 cursor-pointer"><ArrowDownIcon className="w-4 h-4 flex-shrink-0" /> Move Down</a>
+                           <a onClick={(e) => { e.stopPropagation(); moveFolderUp(folder.id); setMenuOpen(false); }} className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-600 cursor-pointer"><ArrowUpIcon className="w-4 h-4 flex-shrink-0" /> Move Up</a>
+                           <a onClick={(e) => { e.stopPropagation(); moveFolderDown(folder.id); setMenuOpen(false); }} className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-600 cursor-pointer"><ArrowDownIcon className="w-4 h-4 flex-shrink-0" /> Move Down</a>
                            <a onClick={(e) => { e.stopPropagation(); setIsConfirmOpen(true); setMenuOpen(false); }} className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-400 hover:bg-gray-600 cursor-pointer"><DeleteIcon className="w-4 h-4 flex-shrink-0" /> Delete</a>
                         </div>
                     )}
@@ -258,7 +254,7 @@ const FolderItem: React.FC<{
                 isOpen={isConfirmOpen}
                 onClose={() => setIsConfirmOpen(false)}
                 onConfirm={() => {
-                    onDeleteFolder(folder.id);
+                    deleteFolder(folder.id);
                     setIsConfirmOpen(false);
                 }}
                 title="Delete Folder"
@@ -271,24 +267,20 @@ const FolderItem: React.FC<{
                         <FolderItem
                             key={child.id}
                             folder={child}
-                            selectedFolderId={selectedFolderId}
-                            onSelectFolder={onSelectFolder}
-                            onRenameFolder={onRenameFolder}
-                            onDeleteFolder={onDeleteFolder}
-                            onMoveFolder={onMoveFolder}
-                            onMovePrompt={onMovePrompt}
-                            onMoveUp={onMoveUp}
-                            onMoveDown={onMoveDown}
                             level={level + 1}
-                            {...props}
+                            onMovePrompt={onMovePrompt}
+                            newFolderParentId={newFolderParentId}
+                            onCancelNewFolder={onCancelNewFolder}
+                            onNewFolderRequest={onNewFolderRequest}
+                            isDragging={isDragging}
+                            setIsDragging={setIsDragging}
                         />
                     ))}
-                    {props.newFolderParentId === folder.id && (
+                    {newFolderParentId === folder.id && (
                         <NewFolderInput
                             parentId={folder.id}
                             level={level + 1}
-                            onCreate={props.onCreateFolder}
-                            onCancel={props.onCancelNewFolder}
+                            onCancel={onCancelNewFolder}
                         />
                     )}
                 </div>
@@ -297,7 +289,9 @@ const FolderItem: React.FC<{
     );
 };
 
-const FolderTree: React.FC<FolderTreeProps> = ({ folders, ...rest }) => {
+const FolderTree: React.FC<FolderTreeProps> = (props) => {
+    const { folders } = useFolders();
+    
     return (
         <div className="space-y-1">
             {folders.map(folder => (
@@ -305,17 +299,14 @@ const FolderTree: React.FC<FolderTreeProps> = ({ folders, ...rest }) => {
                     key={folder.id}
                     folder={folder}
                     level={0}
-                    onMoveUp={() => {}}
-                    onMoveDown={() => {}}
-                    {...rest}
+                    {...props}
                 />
             ))}
-            {rest.newFolderParentId === null && (
+            {props.newFolderParentId === null && (
                 <NewFolderInput
                     parentId={null}
                     level={0}
-                    onCreate={rest.onCreateFolder}
-                    onCancel={rest.onCancelNewFolder}
+                    onCancel={props.onCancelNewFolder}
                 />
             )}
         </div>

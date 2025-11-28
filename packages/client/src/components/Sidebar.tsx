@@ -1,5 +1,4 @@
 import React from 'react';
-import type { Folder } from '../types';
 import { LogoIcon } from './icons/LogoIcon';
 import FolderTree from './FolderTree';
 import { PlusIcon } from './icons/PlusIcon';
@@ -7,21 +6,11 @@ import { BrainIcon } from './icons/BrainIcon';
 import { DeleteIcon } from './icons/DeleteIcon';
 import { LogoutIcon } from './icons/LogoutIcon';
 import ThemeSelector from './ThemeSelector';
-import { useAuth } from '../contexts/AuthContext';
 import type { SupportedModel } from '../services/aiService';
+import { useFolders } from '../contexts/FolderContext';
 
 interface SidebarProps {
-    folders: Folder[];
-    trashFolder: Folder | null;
-    selectedFolderId: string | null;
-    onSelectFolder: (folderId: string | null) => void;
-    onCreateFolder: (name: string, parentId: string | null) => void;
-    onRenameFolder: (folderId: string, newName: string) => void;
-    onDeleteFolder: (folderId: string) => void;
-    onMoveFolder: (folderId: string, newParentId: string | null) => void;
     onMovePrompt: (promptId: string, newFolderId: string) => void;
-    onMoveUp: (folderId: string) => void;
-    onMoveDown: (folderId: string) => void;
     newFolderParentId: string | null | undefined;
     onNewFolderRequest: (parentId: string | null) => void;
     onCancelNewFolder: () => void;
@@ -34,17 +23,7 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
-    folders, 
-    trashFolder,
-    selectedFolderId, 
-    onSelectFolder,
-    onCreateFolder,
-    onRenameFolder,
-    onDeleteFolder,
-    onMoveFolder,
     onMovePrompt,
-    onMoveUp,
-    onMoveDown,
     newFolderParentId,
     onNewFolderRequest,
     onCancelNewFolder,
@@ -55,12 +34,28 @@ const Sidebar: React.FC<SidebarProps> = ({
     setIsDragging,
     onLogout
 }) => {
+    const { trashFolder, selectedFolderId, setSelectedFolderId } = useFolders();
 
     const handleDropOnRoot = (e: React.DragEvent) => {
         e.preventDefault();
         const folderId = e.dataTransfer.getData('application/folder-id');
         if (folderId) {
-            onMoveFolder(folderId, null);
+            // We need moveFolder from context, but it's not imported here.
+            // But handleDropOnRoot was calling onMoveFolder(folderId, null).
+            // I should import moveFolder from context.
+            // But I can't call hook inside callback if I didn't destructure it.
+            // I'll destructure it.
+        }
+    };
+    
+    // Wait, I need moveFolder here for handleDropOnRoot.
+    const { moveFolder } = useFolders();
+
+    const handleDropOnRootWithContext = (e: React.DragEvent) => {
+        e.preventDefault();
+        const folderId = e.dataTransfer.getData('application/folder-id');
+        if (folderId) {
+            moveFolder(folderId, null);
         }
     };
 
@@ -72,7 +67,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     return (
         <div 
             className="w-full h-full bg-theme-secondary border-r border-theme-default flex flex-col"
-            onDrop={handleDropOnRoot}
+            onDrop={handleDropOnRootWithContext}
             onDragOver={handleDragOver}
         >
             <div className="p-4 border-b border-theme-default flex items-center justify-between">
@@ -100,7 +95,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <div className="flex-1 p-2 overflow-y-auto">
                  <div className="px-2 space-y-4">
                     <button
-                        onClick={() => onSelectFolder(null)}
+                        onClick={() => setSelectedFolderId(null)}
                         className={`w-full flex items-center gap-3 p-2 rounded-md text-left text-sm font-medium transition-colors ${
                             selectedFolderId === null 
                             ? 'bg-theme-primary/30 text-theme-default' 
@@ -125,17 +120,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                             </button>
                         </div>
                         <FolderTree
-                            folders={folders}
-                            selectedFolderId={selectedFolderId}
-                            onSelectFolder={onSelectFolder}
-                            onRenameFolder={onRenameFolder}
-                            onDeleteFolder={onDeleteFolder}
-                            onMoveFolder={onMoveFolder}
                             onMovePrompt={onMovePrompt}
-                            onMoveUp={onMoveUp}
-                            onMoveDown={onMoveDown}
                             newFolderParentId={newFolderParentId}
-                            onCreateFolder={onCreateFolder}
                             onCancelNewFolder={onCancelNewFolder}
                             onNewFolderRequest={onNewFolderRequest}
                             isDragging={isDragging}
@@ -147,7 +133,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <div className="p-4 border-b border-theme-default">
                 {trashFolder && (
                     <button
-                        onClick={() => onSelectFolder(trashFolder.id)}
+                        onClick={() => setSelectedFolderId(trashFolder.id)}
                         className={`w-full flex items-center gap-3 p-2 rounded-md text-left text-sm font-medium transition-colors ${
                             selectedFolderId === trashFolder.id
                                 ? 'bg-theme-primary/30 text-theme-default'

@@ -1,59 +1,81 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useEffect,
+} from "react";
+import { api } from "../services/api";
+
+interface User {
+  username: string;
+  token: string;
+}
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  user: { username: string } | null;
-  login: (username: string, password: string) => Promise<boolean>;
+  user: User | null;
+  isLoading: boolean;
+  login: (username: string, password: string) => Promise<void>;
   logout: () => void;
+  register: (username: string, password: string) => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(
+  undefined
+);
 
 interface AuthProviderProps {
   children: ReactNode;
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<{ username: string } | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const login = async (username: string, password: string): Promise<boolean> => {
-    // Check against the default credentials (evertan/1234abcd)
-    if (username === 'evertan' && password === '1234abcd') {
-      setIsAuthenticated(true);
-      setUser({ username });
-      // Generate a simple token (in a real app, this would come from the server)
-      const token = btoa(`${username}:${password}`); // Base64 encoding of credentials
-      // Store authentication state in localStorage for persistence
-      localStorage.setItem('isAuthenticated', 'true');
-      localStorage.setItem('username', username);
-      localStorage.setItem('authToken', token);
-      return true;
+  useEffect(() => {
+    const storedToken = localStorage.getItem("authToken");
+    const storedUsername = localStorage.getItem("username");
+    if (storedToken && storedUsername) {
+      setUser({ token: storedToken, username: storedUsername });
+      api.defaults.headers.common["Authorization"] = `Bearer ${storedToken}`;
     }
-    return false;
+    setIsLoading(false);
+  }, []);
+
+  const login = async (username: string, password: string) => {
+    const response = await api.post("/auth/login", { username, password });
+    const { token, username: loggedInUsername } = response.data;
+    localStorage.setItem("authToken", token);
+    localStorage.setItem("username", loggedInUsername);
+    setUser({ token, username: loggedInUsername });
+    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+  };
+
+  const register = async (username: string, password: string) => {
+    await api.post("/auth/register", { username, password });
+    // After registration, log the user in
+    await login(username, password);
   };
 
   const logout = () => {
-    setIsAuthenticated(false);
     setUser(null);
-    localStorage.removeItem('isAuthenticated');
-    localStorage.removeItem('username');
-    localStorage.removeItem('authToken');
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("username");
+    delete api.defaults.headers.common["Authorization"];
   };
 
-  // Check if user was previously logged in
-  React.useEffect(() => {
-    const storedAuth = localStorage.getItem('isAuthenticated');
-    const storedUsername = localStorage.getItem('username');
-    
-    if (storedAuth === 'true' && storedUsername) {
-      setIsAuthenticated(true);
-      setUser({ username: storedUsername });
-    }
-  }, []);
-
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        isAuthenticated: !!user,
+        user,
+        isLoading,
+        login,
+        logout,
+        register,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -62,7 +84,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
